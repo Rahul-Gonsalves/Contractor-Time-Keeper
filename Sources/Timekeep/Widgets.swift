@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Accent "Add" button: lightens on hover.
 struct AddButton: View {
+    var height: CGFloat? = nil
     let action: () -> Void
     @State private var hovering = false
     var body: some View {
@@ -11,6 +12,7 @@ struct AddButton: View {
                 .foregroundColor(Theme.onAccent)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
+                .frame(height: height)   // nil → natural height
                 .background(hovering ? Theme.accentHover : Theme.accent)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.controlRadius))
         }

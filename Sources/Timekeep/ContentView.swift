@@ -1,6 +1,12 @@
 import SwiftUI
 import AppKit
 
+/// Reports the log form's available width so it can wrap on small windows.
+private struct FormWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
 struct ContentView: View {
     @StateObject private var store = TimeStore()
 
@@ -27,6 +33,10 @@ struct ContentView: View {
     @State private var noticeToken = 0
     @AppStorage(SettingsKeys.recapRecipient) private var recapRecipient = ""
     @AppStorage("recapByDay") private var recapByDay = false
+    @State private var formWidth: CGFloat = 0
+
+    private let controlHeight: CGFloat = 40
+    private let maxContentWidth: CGFloat = 1160
 
     private var curMonth: String { DateHelp.monthKey(Date()) }
 
@@ -37,7 +47,7 @@ struct ContentView: View {
                 header
                 ScrollView {
                     layout(wide: wide)
-                        .frame(maxWidth: 1160, alignment: .top)
+                        .frame(maxWidth: maxContentWidth, alignment: .top)
                         .padding(.horizontal, 32)
                         .padding(.top, 24)
                         .padding(.bottom, 48)
@@ -74,9 +84,11 @@ struct ContentView: View {
         }
         .padding(.top, 22)
         .padding(.bottom, 18)
+        .frame(maxWidth: maxContentWidth)      // cap content to the same column as the body
         .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity)            // center it; margins grow with the window
         .overlay(alignment: .bottom) {
-            Rectangle().fill(Theme.hairline).frame(height: 1)
+            Rectangle().fill(Theme.hairline).frame(height: 1)   // border spans full width
         }
     }
 
@@ -139,20 +151,13 @@ struct ContentView: View {
             SectionLabel(text: "Log time")
                 .padding(.bottom, 14)
 
-            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
-                GridRow {
-                    InsetField(placeholder: "Client", text: $formClient, onSubmit: submitAdd)
-                    DateFieldBox(date: $formDate)
-                    InsetField(placeholder: "Hours", text: $formHours, onSubmit: submitAdd)
-                        .frame(width: 110)
-                }
-                GridRow {
-                    InsetField(placeholder: "Note (optional)", text: $formNote,
-                               fontSize: 14, onSubmit: submitAdd)
-                        .gridCellColumns(2)
-                    addButton
-                }
-            }
+            logForm
+                .background(
+                    GeometryReader { g in
+                        Color.clear.preference(key: FormWidthKey.self, value: g.size.width)
+                    }
+                )
+                .onPreferenceChange(FormWidthKey.self) { formWidth = $0 }
 
             if !clientSuggestions.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
@@ -184,8 +189,51 @@ struct ContentView: View {
         }
     }
 
-    private var addButton: some View {
-        AddButton(action: submitAdd)
+    /// Wide (>= 700pt) three-column grid; wraps to a stacked layout below that.
+    @ViewBuilder
+    private var logForm: some View {
+        if formWidth > 0 && formWidth < 700 {
+            VStack(spacing: 10) {
+                InsetField(placeholder: "Client", text: $formClient,
+                           height: controlHeight, onSubmit: submitAdd)
+                    .frame(maxWidth: .infinity)
+                HStack(spacing: 10) {
+                    DateFieldBox(date: $formDate, height: controlHeight, fillWidth: true)
+                        .frame(minWidth: 90, maxWidth: .infinity)
+                    InsetField(placeholder: "Hours", text: $formHours,
+                               height: controlHeight, onSubmit: submitAdd)
+                        .frame(minWidth: 90, maxWidth: .infinity)
+                }
+                InsetField(placeholder: "Note (optional)", text: $formNote,
+                           fontSize: 14, height: controlHeight, onSubmit: submitAdd)
+                    .frame(maxWidth: .infinity)
+                AddButton(height: controlHeight, action: submitAdd)
+                    .frame(maxWidth: .infinity)
+            }
+            .frame(maxWidth: .infinity)
+        } else {
+            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
+                GridRow {
+                    InsetField(placeholder: "Client", text: $formClient,
+                               height: controlHeight, onSubmit: submitAdd)
+                        .frame(maxWidth: .infinity)
+                    DateFieldBox(date: $formDate, height: controlHeight, fillWidth: true)
+                        .frame(width: 150)
+                    InsetField(placeholder: "Hours", text: $formHours,
+                               height: controlHeight, onSubmit: submitAdd)
+                        .frame(width: 110)
+                }
+                GridRow {
+                    InsetField(placeholder: "Note (optional)", text: $formNote,
+                               fontSize: 14, height: controlHeight, onSubmit: submitAdd)
+                        .frame(maxWidth: .infinity)
+                        .gridCellColumns(2)
+                    AddButton(height: controlHeight, action: submitAdd)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
     }
 
     private func submitAdd() {

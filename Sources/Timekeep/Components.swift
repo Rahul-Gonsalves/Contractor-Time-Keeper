@@ -36,6 +36,7 @@ struct InsetField: View {
     var radius: CGFloat = Theme.controlRadius
     var vPad: CGFloat = 11
     var hPad: CGFloat = 13
+    var height: CGFloat? = nil   // when set, fixes the control height
     var onSubmit: (() -> Void)? = nil
 
     @FocusState private var focused: Bool
@@ -56,6 +57,7 @@ struct InsetField: View {
         }
         .padding(.vertical, vPad)
         .padding(.horizontal, hPad)
+        .frame(height: height)   // nil → natural height
         .background(Theme.inset)
         .clipShape(RoundedRectangle(cornerRadius: radius))
         .overlay(
@@ -75,6 +77,8 @@ struct DateFieldBox: View {
     var radius: CGFloat = Theme.controlRadius
     var vPad: CGFloat = 11
     var hPad: CGFloat = 13
+    var height: CGFloat? = nil    // when set, fixes the control height
+    var fillWidth: Bool = false   // when true, the box fills the width it's given
 
     @State private var showing = false
 
@@ -90,6 +94,8 @@ struct DateFieldBox: View {
             }
             .padding(.vertical, vPad)
             .padding(.horizontal, hPad)
+            .frame(maxWidth: fillWidth ? .infinity : nil, alignment: .leading)
+            .frame(height: height)   // nil → natural height
             .background(Theme.inset)
             .clipShape(RoundedRectangle(cornerRadius: radius))
             .overlay(
