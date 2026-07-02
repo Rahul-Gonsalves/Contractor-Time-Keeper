@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var hintToken = 0
     @State private var copied = false
     @State private var copyToken = 0
+    @State private var recapNotice: String? = nil
+    @State private var noticeToken = 0
 
     private var curMonth: String { DateHelp.monthKey(Date()) }
 
@@ -427,10 +429,20 @@ struct ContentView: View {
 
             HStack(spacing: 8) {
                 CopyButton(copied: copied, action: copyRecap)
-                ExportButton(action: exportTxt)
+                GhostButton(title: "Export .txt", action: exportTxt)
+                GhostButton(title: "Draft email", disabled: !monthHasHours, action: draftEmail)
+            }
+
+            if let notice = recapNotice {
+                Text(notice)
+                    .font(Theme.ui(12.5))
+                    .foregroundColor(Theme.muted)
+                    .padding(.top, 10)
             }
         }
     }
+
+    private var monthHasHours: Bool { store.monthTotal(recapMonth) > 0 }
 
     private func copyRecap() {
         let text = store.recapText(monthKey: recapMonth)
@@ -454,6 +466,44 @@ struct ContentView: View {
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
             try? text.data(using: .utf8)?.write(to: url, options: .atomic)
+        }
+    }
+
+    /// Open a pre-filled recap draft in Outlook if present, else the default mail
+    /// client. Timekeep never sends — the user reviews and sends themselves.
+    private func draftEmail() {
+        let subject = store.recapSubject(monthKey: recapMonth)
+        let body = store.recapText(monthKey: recapMonth)
+        guard let url = MailDraft.mailtoURL(subject: subject, body: body) else { return }
+
+        let ws = NSWorkspace.shared
+        if let outlook = ws.urlForApplication(withBundleIdentifier: "com.microsoft.Outlook") {
+            let config = NSWorkspace.OpenConfiguration()
+            ws.open([url], withApplicationAt: outlook, configuration: config) { _, error in
+                if error != nil {
+                    DispatchQueue.main.async { openDefaultOrCopy(url, body: body) }
+                }
+            }
+        } else {
+            openDefaultOrCopy(url, body: body)
+        }
+    }
+
+    private func openDefaultOrCopy(_ url: URL, body: String) {
+        if !NSWorkspace.shared.open(url) {
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString(body, forType: .string)
+            setRecapNotice("No mail app found — recap copied instead.")
+        }
+    }
+
+    private func setRecapNotice(_ notice: String) {
+        recapNotice = notice
+        noticeToken += 1
+        let token = noticeToken
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            if noticeToken == token { recapNotice = nil }
         }
     }
 }

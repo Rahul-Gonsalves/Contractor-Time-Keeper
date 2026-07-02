@@ -224,24 +224,37 @@ struct CopyButton: View {
     }
 }
 
-/// Ghost "Export .txt" button — accent text/border on hover.
-struct ExportButton: View {
+/// Ghost button (Export .txt / Draft email) — accent text/border on hover;
+/// dimmed and non-interactive when disabled.
+struct GhostButton: View {
+    let title: String
+    var disabled: Bool = false
     let action: () -> Void
     @State private var hovering = false
 
+    private var fg: Color {
+        if disabled { return Theme.faint }
+        return hovering ? Theme.accent : Theme.textSecondary
+    }
+    private var border: Color {
+        (hovering && !disabled) ? Theme.accent : Theme.inputBorder
+    }
+
     var body: some View {
         Button(action: action) {
-            Text("Export .txt")
+            Text(title)
                 .font(Theme.ui(14, .semibold))
-                .foregroundColor(hovering ? Theme.accent : Theme.textSecondary)
+                .foregroundColor(fg)
                 .padding(.vertical, 10)
                 .padding(.horizontal, 16)
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.controlRadius)
-                        .stroke(hovering ? Theme.accent : Theme.inputBorder, lineWidth: 1)
+                        .stroke(border, lineWidth: 1)
                 )
+                .opacity(disabled ? 0.5 : 1)
         }
         .buttonStyle(.plain)
-        .onHover { hovering = $0 }
+        .disabled(disabled)
+        .onHover { if !disabled { hovering = $0 } }
     }
 }

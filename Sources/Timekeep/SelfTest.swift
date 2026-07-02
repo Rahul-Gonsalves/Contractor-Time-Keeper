@@ -86,6 +86,21 @@ enum SelfTest {
 
         try? FileManager.default.removeItem(at: bdir)
 
+        // --- Recap email draft ---
+        check("recap subject", bstore.recapSubject(monthKey: DateHelp.monthKey(yesterday)),
+              "Time recap — \(DateHelp.monthLabel(fromKey: DateHelp.monthKey(yesterday)))")
+
+        let mailto = MailDraft.mailtoURL(subject: "Time recap — July 2026",
+                                         body: "Acme Co — 5h\n\nTotal — 5h")!.absoluteString
+        func has(_ needle: String) -> String { mailto.contains(needle) ? "y" : "n" }
+        func lacks(_ needle: String) -> String { mailto.contains(needle) ? "n" : "y" }
+        check("mailto empty To",   has("mailto:?subject="), "y")
+        check("mailto CRLF",       has("%0D%0A"),           "y") // newlines encoded as CRLF
+        check("mailto em-dash",    has("%E2%80%94"),        "y") // — survives as UTF-8
+        check("mailto space",      has("%20"),              "y")
+        check("mailto no raw dash", lacks("—"),             "y")
+        check("mailto no raw LF",   lacks("\n"),            "y")
+
         print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
         exit(failures == 0 ? 0 : 1)
     }

@@ -130,6 +130,11 @@ final class TimeStore: ObservableObject {
             .reduce(0) { $0 + $1.hours }
     }
 
+    /// Subject line for the recap email — matches the recap's first heading line.
+    func recapSubject(monthKey: String) -> String {
+        "Time recap — \(DateHelp.monthLabel(fromKey: monthKey))"
+    }
+
     /// Plain-text recap for a calendar month, clients sorted by hours desc, no notes.
     func recapText(monthKey: String) -> String {
         let label = DateHelp.monthLabel(fromKey: monthKey)
