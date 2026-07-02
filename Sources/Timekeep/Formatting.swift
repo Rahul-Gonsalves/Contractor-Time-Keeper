@@ -61,4 +61,9 @@ enum DateHelp {
         let sameYear = cal.component(.year, from: date) == cal.component(.year, from: now)
         return fmt(sameYear ? "MMM d" : "MMM d, yyyy").string(from: date)
     }
+
+    /// e.g. "07/02/2026" — numeric label for the date-field box.
+    static func fieldLabel(_ date: Date) -> String {
+        fmt("MM/dd/yyyy").string(from: date)
+    }
 }

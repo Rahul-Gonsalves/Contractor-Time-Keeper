@@ -135,8 +135,15 @@ final class TimeStore: ObservableObject {
         "Time recap — \(DateHelp.monthLabel(fromKey: monthKey))"
     }
 
-    /// Plain-text recap for a calendar month, clients sorted by hours desc, no notes.
+    /// Plain-text recap (Totals view). Kept for callers/tests that don't pass a mode.
     func recapText(monthKey: String) -> String {
+        recap(monthKey: monthKey, byDay: false)
+    }
+
+    /// Plain-text recap for a calendar month, no notes. Clients sorted by month total
+    /// descending. In `byDay` mode each client's total is broken into its daily entries
+    /// (days ascending, two-space indent) with a blank line between clients.
+    func recap(monthKey: String, byDay: Bool) -> String {
         let label = DateHelp.monthLabel(fromKey: monthKey)
         let inMonth = entries.filter { DateHelp.monthKey($0.date) == monthKey }
         if inMonth.isEmpty {
@@ -145,9 +152,11 @@ final class TimeStore: ObservableObject {
         // Aggregate preserving first-seen order (matches the prototype's tie behavior).
         var order: [String] = []
         var byClient: [String: Double] = [:]
+        var perDay: [String: [TimeEntry]] = [:]
         for e in inMonth {
             if byClient[e.client] == nil { order.append(e.client) }
             byClient[e.client, default: 0] += e.hours
+            perDay[e.client, default: []].append(e)
         }
         let names = order.enumerated().sorted {
             let ha = byClient[$0.element] ?? 0, hb = byClient[$1.element] ?? 0
@@ -156,12 +165,20 @@ final class TimeStore: ObservableObject {
         }.map(\.element)
 
         var total: Double = 0
-        let lines = names.map { name -> String in
+        let blocks = names.map { name -> String in
             let h = byClient[name] ?? 0
             total += h
-            return "\(name) — \(formatHours(h))"
+            var lines = ["\(name) — \(formatHours(h))"]
+            if byDay {
+                for e in (perDay[name] ?? []).sorted(by: { $0.date < $1.date }) {
+                    lines.append("  \(DateHelp.shortDayLabel(e.date)) — \(formatHours(e.hours))")
+                }
+            }
+            return lines.joined(separator: "\n")
         }
-        return "Time recap — \(label)\n\n" + lines.joined(separator: "\n") + "\n\nTotal — \(formatHours(total))"
+        let separator = byDay ? "\n\n" : "\n"
+        return "Time recap — \(label)\n\n" + blocks.joined(separator: separator)
+            + "\n\nTotal — \(formatHours(total))"
     }
 
     /// Month keys from the earliest entry to the current month, newest first.

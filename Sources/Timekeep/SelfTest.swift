@@ -104,6 +104,40 @@ enum SelfTest {
         let withTo = MailDraft.mailtoURL(subject: "S", body: "B", to: " boss+recap@acme.co ")!.absoluteString
         check("mailto to prefix", withTo.hasPrefix("mailto:boss+recap@acme.co?") ? "y" : "n", "y")
 
+        // --- Recap "By day" breakdown ---
+        let ddir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("timekeep-selftest-\(UUID().uuidString)")
+        let dstore = TimeStore(directory: ddir)
+        let mc = cal.dateComponents([.year, .month], from: Date())
+        let d5 = cal.date(from: DateComponents(year: mc.year, month: mc.month, day: 5))!
+        let d10 = cal.date(from: DateComponents(year: mc.year, month: mc.month, day: 10))!
+        _ = dstore.addEntry(client: "Acme", hours: 2, note: "", date: d5)
+        _ = dstore.addEntry(client: "Acme", hours: 3.5, note: "", date: d10)
+        _ = dstore.addEntry(client: "Beta", hours: 4, note: "", date: d5)
+        let mk = DateHelp.monthKey(Date())
+        let lbl = DateHelp.monthLabel(fromKey: mk)
+
+        let expectedTotals = [
+            "Time recap — \(lbl)", "", "Acme — 5.5h", "Beta — 4h", "", "Total — 9.5h",
+        ].joined(separator: "\n")
+        check("recap totals", dstore.recap(monthKey: mk, byDay: false), expectedTotals)
+
+        let expectedByDay = [
+            "Time recap — \(lbl)",
+            "",
+            "Acme — 5.5h",
+            "  \(DateHelp.shortDayLabel(d5)) — 2h",
+            "  \(DateHelp.shortDayLabel(d10)) — 3.5h",
+            "",
+            "Beta — 4h",
+            "  \(DateHelp.shortDayLabel(d5)) — 4h",
+            "",
+            "Total — 9.5h",
+        ].joined(separator: "\n")
+        check("recap by day", dstore.recap(monthKey: mk, byDay: true), expectedByDay)
+
+        try? FileManager.default.removeItem(at: ddir)
+
         print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
         exit(failures == 0 ? 0 : 1)
     }

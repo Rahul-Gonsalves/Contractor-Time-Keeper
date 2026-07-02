@@ -86,7 +86,7 @@ struct EntryRow: View {
                        fontSize: 14, radius: Theme.editRadius, vPad: 8, hPad: 10,
                        onSubmit: onSave)
                 .frame(width: 90)
-            InsetDatePicker(date: $editDate)
+            DateFieldBox(date: $editDate, fontSize: 14, radius: Theme.editRadius, vPad: 8, hPad: 10)
             InsetField(placeholder: "Note (optional)", text: $editNote,
                        fontSize: 14, radius: Theme.editRadius, vPad: 8, hPad: 10,
                        onSubmit: onSave)
@@ -200,6 +200,36 @@ struct MonthPicker: View {
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
+    }
+}
+
+/// Two-option segmented control for the recap view: Totals / By day.
+struct RecapModeToggle: View {
+    @Binding var byDay: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            segment("Totals", active: !byDay) { byDay = false }
+            segment("By day", active: byDay) { byDay = true }
+        }
+    }
+
+    @ViewBuilder
+    private func segment(_ title: String, active: Bool, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(Theme.ui(12.5, .semibold))
+                .foregroundColor(active ? Theme.accent : Theme.muted)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .background(active ? Theme.accentTint14 : Theme.inset)
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(active ? Theme.accentBorder45 : Theme.inputBorder, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }
 

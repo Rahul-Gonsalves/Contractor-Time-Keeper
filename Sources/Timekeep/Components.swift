@@ -66,17 +66,49 @@ struct InsetField: View {
     }
 }
 
-/// Compact date picker restricted to today-or-earlier, tinted to the accent so it
-/// reads like the existing inputs. Used in the log form (secondary) and inline edit.
-struct InsetDatePicker: View {
+/// A date field styled exactly like `InsetField` (same bg/border/radius) with a
+/// calendar glyph. Tapping it opens a graphical calendar popover restricted to
+/// today-or-earlier. Used in the log form and inline edit.
+struct DateFieldBox: View {
     @Binding var date: Date
+    var fontSize: CGFloat = 15
+    var radius: CGFloat = Theme.controlRadius
+    var vPad: CGFloat = 11
+    var hPad: CGFloat = 13
+
+    @State private var showing = false
+
     var body: some View {
-        DatePicker("", selection: $date, in: ...Date(), displayedComponents: .date)
-            .labelsHidden()
-            .datePickerStyle(.compact)
-            .tint(Theme.accent)
-            .font(Theme.ui(13))
-            .fixedSize()
+        Button { showing.toggle() } label: {
+            HStack(spacing: 8) {
+                Text(DateHelp.fieldLabel(date))
+                    .font(Theme.ui(fontSize))
+                    .foregroundColor(Theme.textPrimary)
+                Image(systemName: "calendar")
+                    .font(.system(size: fontSize - 2))
+                    .foregroundColor(Theme.muted)
+            }
+            .padding(.vertical, vPad)
+            .padding(.horizontal, hPad)
+            .background(Theme.inset)
+            .clipShape(RoundedRectangle(cornerRadius: radius))
+            .overlay(
+                RoundedRectangle(cornerRadius: radius)
+                    .stroke(showing ? Theme.accentBorder45 : Theme.inputBorder,
+                            lineWidth: showing ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showing, arrowEdge: .bottom) {
+            DatePicker("", selection: $date, in: ...Date(), displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .labelsHidden()
+                .tint(Theme.accent)
+                .padding(12)
+                .frame(width: 260)
+                .background(Theme.card)
+                .preferredColorScheme(.dark)
+        }
     }
 }
 

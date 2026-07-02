@@ -26,6 +26,7 @@ struct ContentView: View {
     @State private var recapNotice: String? = nil
     @State private var noticeToken = 0
     @AppStorage(SettingsKeys.recapRecipient) private var recapRecipient = ""
+    @AppStorage("recapByDay") private var recapByDay = false
 
     private var curMonth: String { DateHelp.monthKey(Date()) }
 
@@ -141,24 +142,17 @@ struct ContentView: View {
             Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
                 GridRow {
                     InsetField(placeholder: "Client", text: $formClient, onSubmit: submitAdd)
+                    DateFieldBox(date: $formDate)
                     InsetField(placeholder: "Hours", text: $formHours, onSubmit: submitAdd)
                         .frame(width: 110)
                 }
                 GridRow {
                     InsetField(placeholder: "Note (optional)", text: $formNote,
                                fontSize: 14, onSubmit: submitAdd)
+                        .gridCellColumns(2)
                     addButton
                 }
             }
-
-            HStack(spacing: 8) {
-                Text("Date")
-                    .font(Theme.ui(12.5))
-                    .foregroundColor(Theme.muted)
-                InsetDatePicker(date: $formDate)
-                Spacer(minLength: 0)
-            }
-            .padding(.top, 10)
 
             if !clientSuggestions.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
@@ -410,8 +404,14 @@ struct ContentView: View {
             }
             .padding(.bottom, 12)
 
+            HStack(spacing: 6) {
+                RecapModeToggle(byDay: $recapByDay)
+                Spacer(minLength: 0)
+            }
+            .padding(.bottom, 12)
+
             ScrollView(.horizontal, showsIndicators: false) {
-                Text(store.recapText(monthKey: recapMonth))
+                Text(store.recap(monthKey: recapMonth, byDay: recapByDay))
                     .font(Theme.mono(12.5))
                     .foregroundColor(Color(hex: "CFD9E6"))
                     .lineSpacing(12.5 * 0.7) // 1.7 line-height
@@ -446,7 +446,7 @@ struct ContentView: View {
     private var monthHasHours: Bool { store.monthTotal(recapMonth) > 0 }
 
     private func copyRecap() {
-        let text = store.recapText(monthKey: recapMonth)
+        let text = store.recap(monthKey: recapMonth, byDay: recapByDay)
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(text, forType: .string)
@@ -459,7 +459,7 @@ struct ContentView: View {
     }
 
     private func exportTxt() {
-        let text = store.recapText(monthKey: recapMonth)
+        let text = store.recap(monthKey: recapMonth, byDay: recapByDay)
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "recap-\(recapMonth).txt"
         panel.allowedContentTypes = [.plainText]
@@ -474,7 +474,7 @@ struct ContentView: View {
     /// client. Timekeep never sends — the user reviews and sends themselves.
     private func draftEmail() {
         let subject = store.recapSubject(monthKey: recapMonth)
-        let body = store.recapText(monthKey: recapMonth)
+        let body = store.recap(monthKey: recapMonth, byDay: recapByDay)
         guard let url = MailDraft.mailtoURL(subject: subject, body: body, to: recapRecipient) else { return }
 
         let ws = NSWorkspace.shared
