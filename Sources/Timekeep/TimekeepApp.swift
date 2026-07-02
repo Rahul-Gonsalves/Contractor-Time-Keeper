@@ -27,5 +27,9 @@ struct TimekeepApp: App {
         .commands {
             CommandGroup(replacing: .newItem) {} // no "New" window
         }
+
+        Settings {
+            SettingsView()
+        }
     }
 }

@@ -6,6 +6,9 @@ import Foundation
 enum MailDraft {
     private static let unreserved = CharacterSet(charactersIn:
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+    // Address part keeps `@` and `+` literal (valid in emails); everything else encoded.
+    private static let addr = CharacterSet(charactersIn:
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~@+")
 
     static func encode(_ s: String) -> String {
         s.replacingOccurrences(of: "\r\n", with: "\n")   // normalize first
@@ -13,8 +16,11 @@ enum MailDraft {
             .addingPercentEncoding(withAllowedCharacters: unreserved) ?? ""
     }
 
-    /// `to` is intentionally left empty — the user fills in the recipient.
+    /// `to` defaults to empty — the user fills in the recipient, unless a default
+    /// "Send recaps to" address is configured in settings.
     static func mailtoURL(subject: String, body: String, to: String = "") -> URL? {
-        URL(string: "mailto:\(to)?subject=\(encode(subject))&body=\(encode(body))")
+        let encTo = to.trimmingCharacters(in: .whitespacesAndNewlines)
+            .addingPercentEncoding(withAllowedCharacters: addr) ?? ""
+        return URL(string: "mailto:\(encTo)?subject=\(encode(subject))&body=\(encode(body))")
     }
 }

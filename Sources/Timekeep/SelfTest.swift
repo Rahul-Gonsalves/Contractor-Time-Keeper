@@ -101,6 +101,9 @@ enum SelfTest {
         check("mailto no raw dash", lacks("—"),             "y")
         check("mailto no raw LF",   lacks("\n"),            "y")
 
+        let withTo = MailDraft.mailtoURL(subject: "S", body: "B", to: " boss+recap@acme.co ")!.absoluteString
+        check("mailto to prefix", withTo.hasPrefix("mailto:boss+recap@acme.co?") ? "y" : "n", "y")
+
         print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
         exit(failures == 0 ? 0 : 1)
     }

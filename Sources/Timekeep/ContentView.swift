@@ -25,6 +25,7 @@ struct ContentView: View {
     @State private var copyToken = 0
     @State private var recapNotice: String? = nil
     @State private var noticeToken = 0
+    @AppStorage(SettingsKeys.recapRecipient) private var recapRecipient = ""
 
     private var curMonth: String { DateHelp.monthKey(Date()) }
 
@@ -474,7 +475,7 @@ struct ContentView: View {
     private func draftEmail() {
         let subject = store.recapSubject(monthKey: recapMonth)
         let body = store.recapText(monthKey: recapMonth)
-        guard let url = MailDraft.mailtoURL(subject: subject, body: body) else { return }
+        guard let url = MailDraft.mailtoURL(subject: subject, body: body, to: recapRecipient) else { return }
 
         let ws = NSWorkspace.shared
         if let outlook = ws.urlForApplication(withBundleIdentifier: "com.microsoft.Outlook") {
