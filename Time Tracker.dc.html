@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #0e131a; font-family: 'Hanken Grotesk', system-ui, sans-serif; }
+    input, select, textarea, button { font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid rgba(125,167,242,.45); outline-offset: 1px; }
+    ::placeholder { color: #55647a; }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; color: #e6ecf4; display: flex; flex-direction: column;">
+
+  <!-- Header -->
+  <header data-screen-label="Header" style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 22px 32px 18px; border-bottom: 1px solid #1d2632;">
+    <div style="display: flex; align-items: baseline; gap: 14px;">
+      <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.01em;">Timekeep</span>
+      <span style="font-size: 13px; color: #8c9aac;">{{ todayLabel }}</span>
+    </div>
+    <div style="display: flex; align-items: baseline; gap: 8px;">
+      <span style="font-size: 13px; color: #8c9aac;">This month</span>
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 600; color: #7da7f2;">{{ monthTotalLabel }}</span>
+    </div>
+  </header>
+
+  <!-- Body grid -->
+  <div style="width: 100%; box-sizing: border-box; margin: 0 auto; padding: 24px 32px 48px; display: grid; gap: 20px; align-items: start; grid-template-columns: {{ gridCols }}; max-width: {{ maxW }};">
+
+    <!-- Main column: add form + timeline -->
+    <main data-screen-label="Log" style="display: flex; flex-direction: column; gap: 20px; min-width: 0; order: {{ mainOrder }};">
+
+      <!-- Add entry -->
+      <section style="background: #161d27; border: 1px solid #232d3b; border-radius: 14px; padding: 20px;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8c9aac; margin-bottom: 14px;">Log time</div>
+        <form onSubmit="{{ addEntry }}" style="display: grid; grid-template-columns: 1fr 110px; gap: 10px;">
+          <input list="tt-clients" value="{{ formClient }}" onChange="{{ onClientChange }}" placeholder="Client" style="box-sizing: border-box; width: 100%; background: #0f1620; border: 1px solid #26313f; border-radius: 9px; padding: 11px 13px; font-size: 15px; color: #e6ecf4;">
+          <datalist id="tt-clients">
+            <sc-for list="{{ clientNames }}" as="cn" hint-placeholder-count="0">
+              <option value="{{ cn }}"></option>
+            </sc-for>
+          </datalist>
+          <input type="number" step="0.25" min="0" value="{{ formHours }}" onChange="{{ onHoursChange }}" placeholder="Hours" style="box-sizing: border-box; width: 100%; background: #0f1620; border: 1px solid #26313f; border-radius: 9px; padding: 11px 13px; font-size: 15px; color: #e6ecf4;">
+          <input value="{{ formNote }}" onChange="{{ onNoteChange }}" placeholder="Note (optional)" style="box-sizing: border-box; width: 100%; background: #0f1620; border: 1px solid #26313f; border-radius: 9px; padding: 11px 13px; font-size: 14px; color: #e6ecf4;">
+          <button type="submit" style="background: #7da7f2; color: #0d1420; border: none; border-radius: 9px; padding: 11px 0; font-size: 15px; font-weight: 700; cursor: pointer;" style-hover="background: #93b7f7;">Add</button>
+        </form>
+        <sc-if value="{{ mergeHint }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top: 10px; font-size: 12.5px; color: #7da7f2;">{{ mergeHint }}</div>
+        </sc-if>
+      </section>
+
+      <!-- Timeline -->
+      <section style="background: #161d27; border: 1px solid #232d3b; border-radius: 14px; padding: 20px; min-height: 120px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+          <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8c9aac;">Entries</div>
+          <sc-if value="{{ filterClient }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ clearFilter }}" style="display: flex; align-items: center; gap: 6px; background: rgba(125,167,242,.12); color: #7da7f2; border: 1px solid rgba(125,167,242,.3); border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer;">{{ filterClient }} · clear</button>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 28px 8px; text-align: center; color: #5c6b7e; font-size: 14px;">No entries yet. Log your first hours above — the date is filled in automatically.</div>
+        </sc-if>
+
+        <sc-for list="{{ dayGroups }}" as="day" hint-placeholder-count="2">
+          <div style="padding-top: 14px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #1d2632;">
+              <span style="font-size: 13px; font-weight: 600; color: #aeb9c9;">{{ day.label }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #5c6b7e;">{{ day.totalLabel }}</span>
+            </div>
+            <sc-for list="{{ day.entries }}" as="en" hint-placeholder-count="2">
+              <div style="border-bottom: 1px solid #171f2a;">
+                <sc-if value="{{ en.isEditing }}" hint-placeholder-val="{{ false }}">
+                  <div style="display: grid; grid-template-columns: 90px 1fr auto auto; gap: 8px; align-items: center; padding: 10px 0;">
+                    <input type="number" step="0.25" min="0" value="{{ editHours }}" onChange="{{ onEditHoursChange }}" style="box-sizing: border-box; width: 100%; background: #0f1620; border: 1px solid #26313f; border-radius: 7px; padding: 8px 10px; font-size: 14px; color: #e6ecf4;">
+                    <input value="{{ editNote }}" onChange="{{ onEditNoteChange }}" placeholder="Note (optional)" style="box-sizing: border-box; width: 100%; background: #0f1620; border: 1px solid #26313f; border-radius: 7px; padding: 8px 10px; font-size: 14px; color: #e6ecf4;">
+                    <button onClick="{{ saveEdit }}" style="background: #7da7f2; color: #0d1420; border: none; border-radius: 7px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer;">Save</button>
+                    <button onClick="{{ cancelEdit }}" style="background: transparent; color: #8c9aac; border: 1px solid #26313f; border-radius: 7px; padding: 8px 12px; font-size: 13px; cursor: pointer;">Cancel</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ en.notEditing }}" hint-placeholder-val="{{ true }}">
+                  <div style="display: flex; align-items: baseline; gap: 12px; padding: 11px 0;" style-hover="background: rgba(255,255,255,.015);">
+                    <span style="font-weight: 600; font-size: 14.5px; white-space: nowrap;">{{ en.client }}</span>
+                    <sc-if value="{{ en.showNote }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-size: 13px; color: #8c9aac; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0;">{{ en.note }}</span>
+                    </sc-if>
+                    <span style="flex: 1;"></span>
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #cfd9e6; white-space: nowrap;">{{ en.hoursLabel }}</span>
+                    <span style="display: flex; gap: 4px;">
+                      <button onClick="{{ en.startEdit }}" style="background: transparent; color: #5c6b7e; border: none; padding: 2px 6px; font-size: 12.5px; cursor: pointer; border-radius: 5px;" style-hover="color: #7da7f2; background: rgba(125,167,242,.1);">Edit</button>
+                      <button onClick="{{ en.remove }}" style="background: transparent; color: #5c6b7e; border: none; padding: 2px 6px; font-size: 12.5px; cursor: pointer; border-radius: 5px;" style-hover="color: #f28b8b; background: rgba(242,139,139,.1);">Delete</button>
+                    </span>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </section>
+    </main>
+
+    <!-- Side column: clients + recap -->
+    <aside data-screen-label="Clients and Recap" style="display: flex; flex-direction: column; gap: 20px; min-width: 0; order: {{ sideOrder }};">
+
+      <!-- Clients -->
+      <section style="background: #161d27; border: 1px solid #232d3b; border-radius: 14px; padding: 20px;">
+        <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8c9aac; margin-bottom: 12px;">Clients</div>
+        <sc-if value="{{ noClients }}" hint-placeholder-val="{{ false }}">
+          <div style="color: #5c6b7e; font-size: 13.5px; padding: 6px 0;">Clients appear here as you log time.</div>
+        </sc-if>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <sc-for list="{{ clients }}" as="cl" hint-placeholder-count="3">
+            <button onClick="{{ cl.select }}" style="display: flex; align-items: baseline; gap: 10px; width: 100%; text-align: left; background: {{ cl.bg }}; border: 1px solid {{ cl.borderColor }}; border-radius: 9px; padding: 10px 12px; cursor: pointer; color: #e6ecf4;" style-hover="background: rgba(125,167,242,.08);">
+              <span style="font-weight: 600; font-size: 14px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ cl.name }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #7da7f2; white-space: nowrap;">{{ cl.monthLabel }}</span>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #5c6b7e; white-space: nowrap;">{{ cl.totalLabel }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- Recap -->
+      <section data-screen-label="Recap" style="background: #161d27; border: 1px solid #232d3b; border-radius: 14px; padding: 20px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px;">
+          <div style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8c9aac;">Monthly recap</div>
+          <select value="{{ recapMonth }}" onChange="{{ onRecapMonthChange }}" style="background: #0f1620; border: 1px solid #26313f; border-radius: 8px; padding: 7px 10px; font-size: 13px; color: #e6ecf4; cursor: pointer;">
+            <sc-for list="{{ monthOptions }}" as="mo" hint-placeholder-count="1">
+              <option value="{{ mo.value }}">{{ mo.label }}</option>
+            </sc-for>
+          </select>
+        </div>
+        <pre style="margin: 0 0 12px; background: #0f1620; border: 1px solid #1d2632; border-radius: 9px; padding: 14px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; line-height: 1.7; color: #cfd9e6; white-space: pre-wrap; overflow-x: auto;">{{ recapText }}</pre>
+        <div style="display: flex; gap: 8px;">
+          <button onClick="{{ copyRecap }}" style="flex: 1; background: {{ copyBg }}; color: {{ copyFg }}; border: none; border-radius: 9px; padding: 10px 0; font-size: 14px; font-weight: 700; cursor: pointer;" style-hover="filter: brightness(1.1);">{{ copyLabel }}</button>
+          <button onClick="{{ exportTxt }}" style="background: transparent; color: #aeb9c9; border: 1px solid #26313f; border-radius: 9px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer;" style-hover="border-color: #7da7f2; color: #7da7f2;">Export .txt</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;layout&quot;: { &quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;Clients right&quot;, &quot;Clients left&quot;, &quot;Single column&quot;], &quot;default&quot;: &quot;Clients right&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Layout&quot; },
+  &quot;showNotes&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Timeline&quot; }
+}">
+class Component extends DCLogic {
+  state = {
+    entries: [],
+    formClient: '', formHours: '', formNote: '',
+    filterClient: null,
+    recapMonth: null,
+    editingId: null, editHours: '', editNote: '',
+    copied: false,
+    mergeHint: null,
+    loaded: false
+  };
+
+  KEY = 'timekeep-entries-v1';
+
+  componentDidMount() {
+    let entries = [];
+    try { entries = JSON.parse(localStorage.getItem(this.KEY) || '[]'); } catch (e) {}
+    if (!Array.isArray(entries)) entries = [];
+    this.setState({ entries, loaded: true, recapMonth: this.monthKey(new Date()) });
+  }
+
+  persist(entries) {
+    try { localStorage.setItem(this.KEY, JSON.stringify(entries)); } catch (e) {}
+  }
+
+  todayISO() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  monthKey(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  fmtHours(h) {
+    const r = Math.round(h * 100) / 100;
+    return (r % 1 === 0 ? r.toFixed(0) : String(r)) + 'h';
+  }
+
+  monthLabelOf(key) {
+    const [y, m] = key.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  }
+
+  addEntry = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const name = this.state.formClient.trim();
+    const hours = parseFloat(this.state.formHours);
+    if (!name || !(hours > 0)) return;
+    const note = this.state.formNote.trim();
+    const today = this.todayISO();
+    const entries = [...this.state.entries];
+    // canonical casing: match existing client case-insensitively
+    const existingName = [...new Set(entries.map(x => x.client))]
+      .find(c => c.toLowerCase() === name.toLowerCase());
+    const client = existingName || name;
+    const idx = entries.findIndex(x => x.client === client && x.date === today);
+    let hint = null;
+    if (idx >= 0) {
+      const cur = entries[idx];
+      entries[idx] = {
+        ...cur,
+        hours: Math.round((cur.hours + hours) * 100) / 100,
+        note: [cur.note, note].filter(Boolean).join('; ')
+      };
+      hint = 'Merged into today\u2019s ' + client + ' entry \u2014 now ' + this.fmtHours(entries[idx].hours) + '.';
+    } else {
+      entries.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), client, date: today, hours: Math.round(hours * 100) / 100, note });
+    }
+    this.persist(entries);
+    this.setState({ entries, formClient: '', formHours: '', formNote: '', mergeHint: hint });
+    clearTimeout(this._hintT);
+    if (hint) this._hintT = setTimeout(() => this.setState({ mergeHint: null }), 4000);
+  };
+
+  buildRecap(monthKey) {
+    const inMonth = this.state.entries.filter(x => x.date.slice(0, 7) === monthKey);
+    const label = this.monthLabelOf(monthKey);
+    if (!inMonth.length) return 'Time recap \u2014 ' + label + '\n\nNo hours logged.';
+    const byClient = {};
+    inMonth.forEach(x => { byClient[x.client] = (byClient[x.client] || 0) + x.hours; });
+    const names = Object.keys(byClient).sort((a, b) => byClient[b] - byClient[a]);
+    let total = 0;
+    const lines = names.map(n => { total += byClient[n]; return n + ' \u2014 ' + this.fmtHours(byClient[n]); });
+    return 'Time recap \u2014 ' + label + '\n\n' + lines.join('\n') + '\n\nTotal \u2014 ' + this.fmtHours(total);
+  }
+
+  copyRecap = () => {
+    const text = this.buildRecap(this.state.recapMonth || this.monthKey(new Date()));
+    const done = () => {
+      this.setState({ copied: true });
+      clearTimeout(this._copyT);
+      this._copyT = setTimeout(() => this.setState({ copied: false }), 2000);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => this.fallbackCopy(text, done));
+    } else this.fallbackCopy(text, done);
+  };
+
+  fallbackCopy(text, done) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  exportTxt = () => {
+    const mk = this.state.recapMonth || this.monthKey(new Date());
+    const blob = new Blob([this.buildRecap(mk)], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'recap-' + mk + '.txt';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+
+  renderVals() {
+    const s = this.state;
+    const showNotes = this.props.showNotes ?? true;
+    const layout = this.props.layout ?? 'Clients right';
+    const now = new Date();
+    const curMonth = this.monthKey(now);
+    const recapMonth = s.recapMonth || curMonth;
+
+    // layout
+    let gridCols = '1fr 380px', mainOrder = 1, sideOrder = 2, maxW = '1160px';
+    if (layout === 'Clients left') { gridCols = '380px 1fr'; mainOrder = 2; sideOrder = 1; }
+    if (layout === 'Single column') { gridCols = '1fr'; maxW = '760px'; }
+
+    // filtered entries
+    const visible = s.filterClient ? s.entries.filter(x => x.client === s.filterClient) : s.entries;
+
+    // day groups (desc)
+    const byDate = {};
+    visible.forEach(x => { (byDate[x.date] = byDate[x.date] || []).push(x); });
+    const dayGroups = Object.keys(byDate).sort().reverse().map(date => {
+      const list = byDate[date];
+      const [y, m, d] = date.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      const total = list.reduce((a, x) => a + x.hours, 0);
+      return {
+        label: dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: y !== now.getFullYear() ? 'numeric' : undefined }),
+        totalLabel: this.fmtHours(total),
+        entries: list.map(en => ({
+          ...en,
+          isEditing: s.editingId === en.id,
+          notEditing: s.editingId !== en.id,
+          showNote: showNotes && !!en.note,
+          hoursLabel: this.fmtHours(en.hours),
+          startEdit: () => this.setState({ editingId: en.id, editHours: String(en.hours), editNote: en.note || '' }),
+          remove: () => {
+            const entries = s.entries.filter(x => x.id !== en.id);
+            this.persist(entries);
+            this.setState({ entries, editingId: s.editingId === en.id ? null : s.editingId });
+          }
+        }))
+      };
+    });
+
+    // clients
+    const agg = {};
+    s.entries.forEach(x => {
+      const a = agg[x.client] = agg[x.client] || { month: 0, total: 0 };
+      a.total += x.hours;
+      if (x.date.slice(0, 7) === curMonth) a.month += x.hours;
+    });
+    const clientNames = Object.keys(agg).sort((a, b) => a.localeCompare(b));
+    const clients = clientNames
+      .slice().sort((a, b) => agg[b].month - agg[a].month || agg[b].total - agg[a].total)
+      .map(name => {
+        const active = s.filterClient === name;
+        return {
+          name,
+          monthLabel: this.fmtHours(agg[name].month),
+          totalLabel: this.fmtHours(agg[name].total) + ' all',
+          bg: active ? 'rgba(125,167,242,.14)' : 'transparent',
+          borderColor: active ? 'rgba(125,167,242,.45)' : '#1d2632',
+          select: () => this.setState({ filterClient: active ? null : name })
+        };
+      });
+
+    // month options: from earliest entry to current month
+    const monthKeys = new Set([curMonth]);
+    s.entries.forEach(x => monthKeys.add(x.date.slice(0, 7)));
+    const monthOptions = [...monthKeys].sort().reverse().map(k => ({ value: k, label: this.monthLabelOf(k) }));
+
+    const monthTotal = s.entries.filter(x => x.date.slice(0, 7) === curMonth).reduce((a, x) => a + x.hours, 0);
+
+    return {
+      todayLabel: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }),
+      monthTotalLabel: this.fmtHours(monthTotal),
+      gridCols, mainOrder, sideOrder, maxW,
+      formClient: s.formClient, formHours: s.formHours, formNote: s.formNote,
+      onClientChange: e => this.setState({ formClient: e.target.value }),
+      onHoursChange: e => this.setState({ formHours: e.target.value }),
+      onNoteChange: e => this.setState({ formNote: e.target.value }),
+      addEntry: this.addEntry,
+      mergeHint: s.mergeHint,
+      isEmpty: s.loaded && visible.length === 0,
+      dayGroups,
+      filterClient: s.filterClient,
+      clearFilter: () => this.setState({ filterClient: null }),
+      clients, clientNames,
+      noClients: s.loaded && clientNames.length === 0,
+      editHours: s.editHours, editNote: s.editNote,
+      onEditHoursChange: e => this.setState({ editHours: e.target.value }),
+      onEditNoteChange: e => this.setState({ editNote: e.target.value }),
+      saveEdit: () => {
+        const h = parseFloat(s.editHours);
+        if (!(h > 0)) return;
+        const entries = s.entries.map(x => x.id === s.editingId ? { ...x, hours: Math.round(h * 100) / 100, note: s.editNote.trim() } : x);
+        this.persist(entries);
+        this.setState({ entries, editingId: null });
+      },
+      cancelEdit: () => this.setState({ editingId: null }),
+      recapMonth,
+      onRecapMonthChange: e => this.setState({ recapMonth: e.target.value }),
+      monthOptions,
+      recapText: this.buildRecap(recapMonth),
+      copyRecap: this.copyRecap,
+      exportTxt: this.exportTxt,
+      copyLabel: s.copied ? 'Copied!' : 'Copy recap',
+      copyBg: s.copied ? '#69d29a' : '#7da7f2',
+      copyFg: '#0d1420'
+    };
+  }
+}
+</script>
+</body>
+</html>

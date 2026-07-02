@@ -1,0 +1,15 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Bundled app output
+Timekeep.app/
+
+# macOS
+.DS_Store
+
+# Xcode (if opened there later)
+*.xcodeproj/xcuserdata/
+xcuserdata/
+DerivedData/
