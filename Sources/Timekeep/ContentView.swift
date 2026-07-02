@@ -478,6 +478,10 @@ struct ContentView: View {
 
             HStack(spacing: 8) {
                 CopyButton(copied: copied, action: copyRecap)
+                    .contextMenu {
+                        Button("Copy recap", action: copyRecap)
+                        Button("Copy formatted (for email)", action: copyFormatted)
+                    }
                 GhostButton(title: "Export .txt", action: exportTxt)
                 GhostButton(title: "Draft email", disabled: !monthHasHours, action: draftEmail)
             }
@@ -498,6 +502,22 @@ struct ContentView: View {
         let pb = NSPasteboard.general
         pb.clearContents()
         pb.setString(text, forType: .string)
+        flashCopied()
+    }
+
+    /// Copy the formatted (HTML) recap plus a plain-text fallback: pasting into
+    /// Outlook/Gmail keeps the table; pasting into a plain field falls back to text.
+    private func copyFormatted() {
+        let html = store.recapHTML(monthKey: recapMonth, byDay: recapByDay)
+        let plain = store.recap(monthKey: recapMonth, byDay: recapByDay)
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(html, forType: .html)
+        pb.setString(plain, forType: .string)
+        flashCopied()
+    }
+
+    private func flashCopied() {
         copied = true
         copyToken += 1
         let token = copyToken
@@ -518,13 +538,27 @@ struct ContentView: View {
         }
     }
 
-    /// Open a pre-filled recap draft in Outlook if present, else the default mail
-    /// client. Timekeep never sends — the user reviews and sends themselves.
+    /// Open a pre-filled recap draft. Prefers a rich-text compose window via
+    /// NSSharingService (formatted HTML); falls back to a plain-text mailto: draft in
+    /// Outlook / the default mail client. Timekeep never sends — the user reviews.
     private func draftEmail() {
         let subject = store.recapSubject(monthKey: recapMonth)
-        let body = store.recapEmailBody(monthKey: recapMonth, byDay: recapByDay)
-        guard let url = MailDraft.mailtoURL(subject: subject, body: body, to: recapRecipient) else { return }
+        let to = recapRecipient.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        // Preferred: rich-text compose via NSSharingService.
+        let html = store.recapEmailHTML(monthKey: recapMonth, byDay: recapByDay)
+        if let attr = attributedString(fromHTML: html),
+           let service = NSSharingService(named: .composeEmail),
+           service.canPerform(withItems: [attr]) {
+            service.subject = subject
+            if !to.isEmpty { service.recipients = [to] }
+            service.perform(withItems: [attr])
+            return
+        }
+
+        // Fallback: plain-text mailto:.
+        let body = store.recapEmailBody(monthKey: recapMonth, byDay: recapByDay)
+        guard let url = MailDraft.mailtoURL(subject: subject, body: body, to: to) else { return }
         let ws = NSWorkspace.shared
         if let outlook = ws.urlForApplication(withBundleIdentifier: "com.microsoft.Outlook") {
             let config = NSWorkspace.OpenConfiguration()
@@ -536,6 +570,15 @@ struct ContentView: View {
         } else {
             openDefaultOrCopy(url, body: body)
         }
+    }
+
+    private func attributedString(fromHTML html: String) -> NSAttributedString? {
+        guard let data = html.data(using: .utf8) else { return nil }
+        return try? NSAttributedString(
+            data: data,
+            options: [.documentType: NSAttributedString.DocumentType.html,
+                      .characterEncoding: String.Encoding.utf8.rawValue],
+            documentAttributes: nil)
     }
 
     private func openDefaultOrCopy(_ url: URL, body: String) {

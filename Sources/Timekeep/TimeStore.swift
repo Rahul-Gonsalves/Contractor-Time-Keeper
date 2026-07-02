@@ -154,15 +154,19 @@ final class TimeStore: ObservableObject {
             + recapContent(monthKey: monthKey, byDay: byDay)
     }
 
-    /// The recap content without the heading: client lines + total, or the empty
-    /// notice. Clients sorted by month total descending. In `byDay` mode each client's
-    /// total is broken into its daily entries (days ascending, two-space indent) with a
-    /// blank line between clients.
-    private func recapContent(monthKey: String, byDay: Bool) -> String {
-        let inMonth = entries.filter { DateHelp.monthKey($0.date) == monthKey }
-        if inMonth.isEmpty { return "No hours logged." }
+    /// A client's month total plus its per-day entries (days ascending).
+    struct RecapClient {
+        let name: String
+        let total: Double
+        let days: [(date: Date, hours: Double)]
+    }
 
-        // Aggregate preserving first-seen order (matches the prototype's tie behavior).
+    /// Clients for a month, sorted by total descending (first-seen order breaks ties).
+    /// Empty when the month has no entries.
+    func aggregate(monthKey: String) -> [RecapClient] {
+        let inMonth = entries.filter { DateHelp.monthKey($0.date) == monthKey }
+        if inMonth.isEmpty { return [] }
+
         var order: [String] = []
         var byClient: [String: Double] = [:]
         var perDay: [String: [TimeEntry]] = [:]
@@ -177,14 +181,28 @@ final class TimeStore: ObservableObject {
             return $0.offset < $1.offset // stable
         }.map(\.element)
 
+        return names.map { name in
+            let days = (perDay[name] ?? [])
+                .sorted { $0.date < $1.date }
+                .map { (date: $0.date, hours: $0.hours) }
+            return RecapClient(name: name, total: byClient[name] ?? 0, days: days)
+        }
+    }
+
+    /// The recap content without the heading: client lines + total, or the empty
+    /// notice. In `byDay` mode each client's total is broken into its daily entries
+    /// (days ascending, two-space indent) with a blank line between clients.
+    private func recapContent(monthKey: String, byDay: Bool) -> String {
+        let clients = aggregate(monthKey: monthKey)
+        if clients.isEmpty { return "No hours logged." }
+
         var total: Double = 0
-        let blocks = names.map { name -> String in
-            let h = byClient[name] ?? 0
-            total += h
-            var lines = ["\(name) — \(formatHours(h))"]
+        let blocks = clients.map { c -> String in
+            total += c.total
+            var lines = ["\(c.name) — \(formatHours(c.total))"]
             if byDay {
-                for e in (perDay[name] ?? []).sorted(by: { $0.date < $1.date }) {
-                    lines.append("  \(DateHelp.shortDayLabel(e.date)) — \(formatHours(e.hours))")
+                for d in c.days {
+                    lines.append("  \(DateHelp.shortDayLabel(d.date)) — \(formatHours(d.hours))")
                 }
             }
             return lines.joined(separator: "\n")

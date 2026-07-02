@@ -154,7 +154,36 @@ enum SelfTest {
         check("recap email subject", dstore.recapSubject(monthKey: mk),
               "\(DateHelp.monthLabel(fromKey: mk)) Hours")
 
+        // --- HTML recap ---
+        func yesIf(_ b: Bool) -> String { b ? "y" : "n" }
+        let htmlTotals = dstore.recapHTML(monthKey: mk, byDay: false)
+        check("html heading",       yesIf(htmlTotals.contains("Time recap — \(lbl)")), "y")
+        check("html table",         yesIf(htmlTotals.contains("<table")), "y")
+        check("html header bg",     yesIf(htmlTotals.contains("#F1F4F8")), "y")
+        check("html total color",   yesIf(htmlTotals.contains("#3B6FD4")), "y")
+        check("html total border",  yesIf(htmlTotals.contains("border-top:2px solid #7DA7F2")), "y")
+        check("html tabular-nums",  yesIf(htmlTotals.contains("tabular-nums")), "y")
+        check("html client cell",   yesIf(htmlTotals.contains(">Acme<")), "y")
+        check("html totals no indent", yesIf(!htmlTotals.contains("padding-left:24px")), "y")
+
+        let htmlByDay = dstore.recapHTML(monthKey: mk, byDay: true)
+        check("html byday indent",  yesIf(htmlByDay.contains("padding-left:24px")), "y")
+        check("html byday day cell", yesIf(htmlByDay.contains(">\(DateHelp.shortDayLabel(d5))<")), "y")
+
+        let emailHTML = dstore.recapEmailHTML(monthKey: mk, byDay: false)
+        check("email html greeting", yesIf(emailHTML.contains("here are my hours for \(DateHelp.monthName(fromKey: mk))")), "y")
+        check("email html signature", yesIf(emailHTML.contains("Rahul Gonsalves")), "y")
+
         try? FileManager.default.removeItem(at: ddir)
+
+        // HTML escaping of client names.
+        let edir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("timekeep-selftest-\(UUID().uuidString)")
+        let estore = TimeStore(directory: edir)
+        _ = estore.addEntry(client: "A & <B>", hours: 1, note: "", date: d5)
+        let escHTML = estore.recapHTML(monthKey: mk, byDay: false)
+        check("html escapes", yesIf(escHTML.contains("A &amp; &lt;B&gt;") && !escHTML.contains("<B>")), "y")
+        try? FileManager.default.removeItem(at: edir)
 
         print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
         exit(failures == 0 ? 0 : 1)
