@@ -130,9 +130,16 @@ final class TimeStore: ObservableObject {
             .reduce(0) { $0 + $1.hours }
     }
 
-    /// Subject line for the recap email — matches the recap's first heading line.
+    /// Subject line for the recap email, e.g. "July 2026 Hours".
     func recapSubject(monthKey: String) -> String {
-        "Time recap — \(DateHelp.monthLabel(fromKey: monthKey))"
+        "\(DateHelp.monthLabel(fromKey: monthKey)) Hours"
+    }
+
+    /// Email body: greeting + the hours content (current view) + signature.
+    func recapEmailBody(monthKey: String, byDay: Bool) -> String {
+        let month = DateHelp.monthName(fromKey: monthKey)
+        let content = recapContent(monthKey: monthKey, byDay: byDay)
+        return "Hi,\nhere are my hours for \(month)\n\n\(content)\n\nThanks,\nRahul Gonsalves"
     }
 
     /// Plain-text recap (Totals view). Kept for callers/tests that don't pass a mode.
@@ -140,15 +147,21 @@ final class TimeStore: ObservableObject {
         recap(monthKey: monthKey, byDay: false)
     }
 
-    /// Plain-text recap for a calendar month, no notes. Clients sorted by month total
-    /// descending. In `byDay` mode each client's total is broken into its daily entries
-    /// (days ascending, two-space indent) with a blank line between clients.
+    /// Plain-text recap for a calendar month, no notes: the "Time recap — <Month>"
+    /// heading followed by the content.
     func recap(monthKey: String, byDay: Bool) -> String {
-        let label = DateHelp.monthLabel(fromKey: monthKey)
+        "Time recap — \(DateHelp.monthLabel(fromKey: monthKey))\n\n"
+            + recapContent(monthKey: monthKey, byDay: byDay)
+    }
+
+    /// The recap content without the heading: client lines + total, or the empty
+    /// notice. Clients sorted by month total descending. In `byDay` mode each client's
+    /// total is broken into its daily entries (days ascending, two-space indent) with a
+    /// blank line between clients.
+    private func recapContent(monthKey: String, byDay: Bool) -> String {
         let inMonth = entries.filter { DateHelp.monthKey($0.date) == monthKey }
-        if inMonth.isEmpty {
-            return "Time recap — \(label)\n\nNo hours logged."
-        }
+        if inMonth.isEmpty { return "No hours logged." }
+
         // Aggregate preserving first-seen order (matches the prototype's tie behavior).
         var order: [String] = []
         var byClient: [String: Double] = [:]
@@ -177,8 +190,7 @@ final class TimeStore: ObservableObject {
             return lines.joined(separator: "\n")
         }
         let separator = byDay ? "\n\n" : "\n"
-        return "Time recap — \(label)\n\n" + blocks.joined(separator: separator)
-            + "\n\nTotal — \(formatHours(total))"
+        return blocks.joined(separator: separator) + "\n\nTotal — \(formatHours(total))"
     }
 
     /// Month keys from the earliest entry to the current month, newest first.

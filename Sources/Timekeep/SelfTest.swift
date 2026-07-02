@@ -87,8 +87,9 @@ enum SelfTest {
         try? FileManager.default.removeItem(at: bdir)
 
         // --- Recap email draft ---
-        check("recap subject", bstore.recapSubject(monthKey: DateHelp.monthKey(yesterday)),
-              "Time recap — \(DateHelp.monthLabel(fromKey: DateHelp.monthKey(yesterday)))")
+        let mkY = DateHelp.monthKey(yesterday)
+        check("recap subject", bstore.recapSubject(monthKey: mkY),
+              "\(DateHelp.monthLabel(fromKey: mkY)) Hours")
 
         let mailto = MailDraft.mailtoURL(subject: "Time recap — July 2026",
                                          body: "Acme Co — 5h\n\nTotal — 5h")!.absoluteString
@@ -135,6 +136,23 @@ enum SelfTest {
             "Total — 9.5h",
         ].joined(separator: "\n")
         check("recap by day", dstore.recap(monthKey: mk, byDay: true), expectedByDay)
+
+        // Email body: greeting + hours content (no heading) + signature.
+        let expectedEmail = [
+            "Hi,",
+            "here are my hours for \(DateHelp.monthName(fromKey: mk))",
+            "",
+            "Acme — 5.5h",
+            "Beta — 4h",
+            "",
+            "Total — 9.5h",
+            "",
+            "Thanks,",
+            "Rahul Gonsalves",
+        ].joined(separator: "\n")
+        check("recap email body", dstore.recapEmailBody(monthKey: mk, byDay: false), expectedEmail)
+        check("recap email subject", dstore.recapSubject(monthKey: mk),
+              "\(DateHelp.monthLabel(fromKey: mk)) Hours")
 
         try? FileManager.default.removeItem(at: ddir)
 

@@ -50,6 +50,11 @@ enum DateHelp {
         monthLabel(date(fromMonthKey: key))
     }
 
+    /// Month name only, e.g. "July"
+    static func monthName(fromKey key: String) -> String {
+        fmt("MMMM").string(from: date(fromMonthKey: key))
+    }
+
     /// e.g. "Wed, Jul 2"; year appended only when not the current year.
     static func dayLabel(_ date: Date, now: Date = Date()) -> String {
         let sameYear = cal.component(.year, from: date) == cal.component(.year, from: now)

@@ -474,7 +474,7 @@ struct ContentView: View {
     /// client. Timekeep never sends — the user reviews and sends themselves.
     private func draftEmail() {
         let subject = store.recapSubject(monthKey: recapMonth)
-        let body = store.recap(monthKey: recapMonth, byDay: recapByDay)
+        let body = store.recapEmailBody(monthKey: recapMonth, byDay: recapByDay)
         guard let url = MailDraft.mailtoURL(subject: subject, body: body, to: recapRecipient) else { return }
 
         let ws = NSWorkspace.shared
