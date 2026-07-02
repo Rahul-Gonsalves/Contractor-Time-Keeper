@@ -14,6 +14,17 @@ Tools toolchain (no full Xcode required).
 open Timekeep.app            # launch (or double-click it in Finder)
 ```
 
+## Install like a normal Mac app
+```bash
+./Scripts/install.sh         # builds + copies to /Applications
+```
+After this, Timekeep shows up in Spotlight and Launchpad and opens with a
+double-click — no Gatekeeper prompt, because a locally-built app carries no
+download-quarantine flag. (A right-click ▸ Open is only ever needed if you
+*download/transfer* the .app to a different Mac.) Fully warning-free
+distribution to other machines would require signing + notarizing with a paid
+Apple Developer account.
+
 ## Develop from the CLI
 ```bash
 swift build                  # debug build
