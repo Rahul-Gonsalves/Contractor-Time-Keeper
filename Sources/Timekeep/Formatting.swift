@@ -55,4 +55,10 @@ enum DateHelp {
         let sameYear = cal.component(.year, from: date) == cal.component(.year, from: now)
         return fmt(sameYear ? "EEE, MMM d" : "EEE, MMM d, yyyy").string(from: date)
     }
+
+    /// e.g. "Jul 1" (no weekday); year appended only when not the current year.
+    static func shortDayLabel(_ date: Date, now: Date = Date()) -> String {
+        let sameYear = cal.component(.year, from: date) == cal.component(.year, from: now)
+        return fmt(sameYear ? "MMM d" : "MMM d, yyyy").string(from: date)
+    }
 }

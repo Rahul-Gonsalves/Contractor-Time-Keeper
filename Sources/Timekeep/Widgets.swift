@@ -25,6 +25,7 @@ struct EntryRow: View {
     let isEditing: Bool
     @Binding var editHours: String
     @Binding var editNote: String
+    @Binding var editDate: Date
     let onStartEdit: () -> Void
     let onSave: () -> Void
     let onCancel: () -> Void
@@ -85,6 +86,7 @@ struct EntryRow: View {
                        fontSize: 14, radius: Theme.editRadius, vPad: 8, hPad: 10,
                        onSubmit: onSave)
                 .frame(width: 90)
+            InsetDatePicker(date: $editDate)
             InsetField(placeholder: "Note (optional)", text: $editNote,
                        fontSize: 14, radius: Theme.editRadius, vPad: 8, hPad: 10,
                        onSubmit: onSave)

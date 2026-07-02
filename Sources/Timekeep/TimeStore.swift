@@ -47,15 +47,17 @@ final class TimeStore: ObservableObject {
 
     // MARK: - Core behavior
 
-    /// Add an entry. Requires non-empty client and hours > 0. Date is always today.
-    /// Canonicalizes casing against existing clients and merges same client + same day.
+    /// Add an entry. Requires non-empty client and hours > 0. The date defaults to
+    /// today but may be backdated. Canonicalizes casing against existing clients and
+    /// merges same client + same day (keyed on the chosen date).
     /// Returns a transient merge hint when a merge happened, else nil.
     @discardableResult
-    func addEntry(client rawClient: String, hours: Double, note rawNote: String) -> String? {
+    func addEntry(client rawClient: String, hours: Double, note rawNote: String,
+                  date rawDate: Date = Date()) -> String? {
         let name = rawClient.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, hours > 0 else { return nil }
         let note = rawNote.trimmingCharacters(in: .whitespacesAndNewlines)
-        let today = DateHelp.cal.startOfDay(for: Date())
+        let day = DateHelp.cal.startOfDay(for: rawDate)
 
         // Canonical casing: reuse existing client's casing on a case-insensitive match.
         let existingName = entries
@@ -65,27 +67,53 @@ final class TimeStore: ObservableObject {
 
         var hint: String? = nil
         if let idx = entries.firstIndex(where: {
-            $0.client == client && DateHelp.cal.isDate($0.date, inSameDayAs: today)
+            $0.client == client && DateHelp.cal.isDate($0.date, inSameDayAs: day)
         }) {
             // Merge: add hours, join notes with "; ".
             entries[idx].hours = ((entries[idx].hours + hours) * 100).rounded() / 100
             let joined = [entries[idx].note, note].filter { !$0.isEmpty }.joined(separator: "; ")
             entries[idx].note = joined
-            hint = "Merged into today’s \(client) entry — now \(formatHours(entries[idx].hours))."
+            hint = mergeHint(client: client, hours: entries[idx].hours, day: day)
         } else {
             let rounded = (hours * 100).rounded() / 100
-            entries.append(TimeEntry(client: client, date: today, hours: rounded, note: note))
+            entries.append(TimeEntry(client: client, date: day, hours: rounded, note: note))
         }
         persist()
         return hint
     }
 
-    /// Edit hours/note of an existing entry. Hours must remain > 0 to save.
+    private func mergeHint(client: String, hours: Double, day: Date) -> String {
+        let h = formatHours(hours)
+        if DateHelp.cal.isDateInToday(day) {
+            return "Merged into today’s \(client) entry — now \(h)."
+        }
+        return "Merged into \(client) on \(DateHelp.shortDayLabel(day)) — now \(h)."
+    }
+
+    /// Edit hours/note/date of an existing entry. Hours must remain > 0 to save.
+    /// If the new date lands on a client+day that already has another entry, the two
+    /// are merged (hours summed, notes joined) instead of creating a duplicate row.
     @discardableResult
-    func updateEntry(id: UUID, hours: Double, note: String) -> Bool {
+    func updateEntry(id: UUID, hours: Double, note rawNote: String, date rawDate: Date) -> Bool {
         guard hours > 0, let idx = entries.firstIndex(where: { $0.id == id }) else { return false }
-        entries[idx].hours = (hours * 100).rounded() / 100
-        entries[idx].note = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let day = DateHelp.cal.startOfDay(for: rawDate)
+        let note = rawNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        let client = entries[idx].client
+        let roundedHours = (hours * 100).rounded() / 100
+
+        if let targetIdx = entries.firstIndex(where: {
+            $0.id != id && $0.client == client && DateHelp.cal.isDate($0.date, inSameDayAs: day)
+        }) {
+            // Merge into the existing entry for that day, then drop the edited one.
+            entries[targetIdx].hours = ((entries[targetIdx].hours + roundedHours) * 100).rounded() / 100
+            let joined = [entries[targetIdx].note, note].filter { !$0.isEmpty }.joined(separator: "; ")
+            entries[targetIdx].note = joined
+            entries.remove(at: idx)
+        } else {
+            entries[idx].hours = roundedHours
+            entries[idx].note = note
+            entries[idx].date = day
+        }
         persist()
         return true
     }

@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var formClient = ""
     @State private var formHours = ""
     @State private var formNote = ""
+    @State private var formDate = Date()
 
     // Filter / recap / edit
     @State private var filterClient: String? = nil
@@ -15,6 +16,7 @@ struct ContentView: View {
     @State private var editingID: UUID? = nil
     @State private var editHours = ""
     @State private var editNote = ""
+    @State private var editDate = Date()
 
     // Transient UI
     @State private var mergeHint: String? = nil
@@ -146,6 +148,15 @@ struct ContentView: View {
                 }
             }
 
+            HStack(spacing: 8) {
+                Text("Date")
+                    .font(Theme.ui(12.5))
+                    .foregroundColor(Theme.muted)
+                InsetDatePicker(date: $formDate)
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 10)
+
             if !clientSuggestions.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(clientSuggestions.prefix(6), id: \.self) { name in
@@ -182,9 +193,9 @@ struct ContentView: View {
 
     private func submitAdd() {
         guard let hours = Double(formHours.trimmingCharacters(in: .whitespaces)) else { return }
-        let hint = store.addEntry(client: formClient, hours: hours, note: formNote)
+        let hint = store.addEntry(client: formClient, hours: hours, note: formNote, date: formDate)
         guard !formClient.trimmingCharacters(in: .whitespaces).isEmpty, hours > 0 else { return }
-        formClient = ""; formHours = ""; formNote = ""
+        formClient = ""; formHours = ""; formNote = ""; formDate = Date()
         setMergeHint(hint)
     }
 
@@ -291,14 +302,16 @@ struct ContentView: View {
                     isEditing: editingID == entry.id,
                     editHours: $editHours,
                     editNote: $editNote,
+                    editDate: $editDate,
                     onStartEdit: {
                         editingID = entry.id
                         editHours = trimmedHoursString(entry.hours)
                         editNote = entry.note
+                        editDate = entry.date
                     },
                     onSave: {
                         if let h = Double(editHours.trimmingCharacters(in: .whitespaces)),
-                           store.updateEntry(id: entry.id, hours: h, note: editNote) {
+                           store.updateEntry(id: entry.id, hours: h, note: editNote, date: editDate) {
                             editingID = nil
                         }
                     },

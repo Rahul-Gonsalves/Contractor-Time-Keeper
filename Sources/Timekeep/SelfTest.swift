@@ -57,6 +57,35 @@ enum SelfTest {
 
         try? FileManager.default.removeItem(at: dir)
 
+        // --- Backdated entries ---
+        let cal = DateHelp.cal
+        let today = cal.startOfDay(for: Date())
+        let yesterday = cal.date(byAdding: .day, value: -1, to: today)!
+
+        // Backdated add lands in the chosen day's month; merge keys on that date and
+        // the hint names the day when it isn't today.
+        let bdir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("timekeep-selftest-\(UUID().uuidString)")
+        let bstore = TimeStore(directory: bdir)
+        _ = bstore.addEntry(client: "Beta", hours: 1, note: "x", date: yesterday)
+        let bHint = bstore.addEntry(client: "beta", hours: 4, note: "y", date: yesterday)
+        check("backdate merge count", "\(bstore.entries.count)", "1")
+        check("backdate lands in day", DateHelp.monthKey(bstore.entries[0].date), DateHelp.monthKey(yesterday))
+        check("backdate hint names day", bHint ?? "nil",
+              "Merged into Beta on \(DateHelp.shortDayLabel(yesterday)) — now 5h.")
+
+        // Editing an entry's date onto an existing client+day merges the two rows.
+        _ = bstore.addEntry(client: "Beta", hours: 3, note: "today", date: today)
+        check("pre-edit count", "\(bstore.entries.count)", "2")
+        let todayEntry = bstore.entries.first { cal.isDate($0.date, inSameDayAs: today) }!
+        _ = bstore.updateEntry(id: todayEntry.id, hours: todayEntry.hours,
+                               note: todayEntry.note, date: yesterday)
+        check("edit-merge count", "\(bstore.entries.count)", "1")
+        check("edit-merge hours", formatHours(bstore.entries[0].hours), "8h")
+        check("edit-merge notes", bstore.entries[0].note, "x; y; today")
+
+        try? FileManager.default.removeItem(at: bdir)
+
         print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
         exit(failures == 0 ? 0 : 1)
     }

@@ -66,6 +66,20 @@ struct InsetField: View {
     }
 }
 
+/// Compact date picker restricted to today-or-earlier, tinted to the accent so it
+/// reads like the existing inputs. Used in the log form (secondary) and inline edit.
+struct InsetDatePicker: View {
+    @Binding var date: Date
+    var body: some View {
+        DatePicker("", selection: $date, in: ...Date(), displayedComponents: .date)
+            .labelsHidden()
+            .datePickerStyle(.compact)
+            .tint(Theme.accent)
+            .font(Theme.ui(13))
+            .fixedSize()
+    }
+}
+
 /// A text button (Edit/Delete/etc.) that tints its foreground + background on hover.
 struct HoverTextButton: View {
     let title: String
