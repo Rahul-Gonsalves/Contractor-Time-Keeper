@@ -124,6 +124,20 @@ struct ContentView: View {
             logTimeCard
             timelineCard
         }
+        // Host the autocomplete dropdown above the cards (outside their clipping) so it
+        // floats over the Entries card and shows all matches.
+        .overlayPreferenceValue(ClientAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if suggestionsVisible, let anchor {
+                    let rect = proxy[anchor]
+                    SuggestionsDropdown(suggestions: clientSuggestions,
+                                        highlighted: acClamped,
+                                        onPick: acceptSuggestion)
+                        .frame(width: rect.width)
+                        .offset(x: rect.minX, y: rect.maxY + 4)
+                }
+            }
+        }
     }
 
     private var sideColumn: some View {
@@ -210,21 +224,6 @@ struct ContentView: View {
                     }
                 )
                 .onPreferenceChange(FormWidthKey.self) { formWidth = $0 }
-                .overlayPreferenceValue(ClientAnchorKey.self) { anchor in
-                    GeometryReader { proxy in
-                        if suggestionsVisible, let anchor {
-                            let rect = proxy[anchor]
-                            SuggestionsDropdown(
-                                suggestions: Array(clientSuggestions.prefix(8)),
-                                highlighted: acClamped,
-                                onPick: acceptSuggestion
-                            )
-                            .frame(width: rect.width)
-                            .offset(x: rect.minX, y: rect.maxY + 4)
-                        }
-                    }
-                }
-                .zIndex(10)
 
             if let hint = mergeHint {
                 Text(hint)

@@ -212,8 +212,9 @@ struct SuggestionsDropdown: View {
     let onPick: (Int) -> Void
 
     @State private var hovered: Int? = nil
+    private let rowHeight: CGFloat = 30
 
-    var body: some View {
+    private var rows: some View {
         VStack(spacing: 0) {
             ForEach(Array(suggestions.enumerated()), id: \.offset) { i, name in
                 Button { onPick(i) } label: {
@@ -223,13 +224,23 @@ struct SuggestionsDropdown: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 8)
+                        .frame(height: rowHeight)
                         .padding(.horizontal, 13)
                         .background((i == highlighted || hovered == i) ? Theme.accentTint08 : Color.clear)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .onHover { hovered = $0 ? i : (hovered == i ? nil : hovered) }
+            }
+        }
+    }
+
+    var body: some View {
+        Group {
+            if suggestions.count > 6 {
+                ScrollView { rows }.frame(height: rowHeight * 6)   // scroll beyond 6
+            } else {
+                rows
             }
         }
         .padding(.vertical, 4)
@@ -239,6 +250,7 @@ struct SuggestionsDropdown: View {
             RoundedRectangle(cornerRadius: Theme.controlRadius)
                 .stroke(Theme.inputBorder, lineWidth: 1)
         )
+        .shadow(color: .black.opacity(0.4), radius: 12, x: 0, y: 8)
     }
 }
 
