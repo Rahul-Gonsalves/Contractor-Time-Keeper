@@ -7,14 +7,14 @@ CONFIG="${1:-release}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-echo "▸ Building ($CONFIG)…"
+echo "▸ Building ($CONFIG)..."
 swift build -c "$CONFIG"
 
 BIN="$(swift build -c "$CONFIG" --show-bin-path)/Timekeep"
 APP="$ROOT/Timekeep.app"
 CONTENTS="$APP/Contents"
 
-echo "▸ Assembling $APP…"
+echo "▸ Assembling $APP..."
 rm -rf "$APP"
 mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
 cp "$BIN" "$CONTENTS/MacOS/Timekeep"

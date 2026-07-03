@@ -11,7 +11,7 @@ cd "$ROOT"
 "$ROOT/Scripts/bundle.sh" release
 
 DEST="/Applications/Timekeep.app"
-echo "▸ Installing to $DEST…"
+echo "▸ Installing to $DEST..."
 rm -rf "$DEST"
 cp -R "$ROOT/Timekeep.app" "$DEST"
 
