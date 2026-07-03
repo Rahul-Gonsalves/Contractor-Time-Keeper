@@ -205,6 +205,43 @@ struct MonthPicker: View {
     }
 }
 
+/// Floating autocomplete dropdown anchored beneath the Client field.
+struct SuggestionsDropdown: View {
+    let suggestions: [String]
+    let highlighted: Int
+    let onPick: (Int) -> Void
+
+    @State private var hovered: Int? = nil
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(suggestions.enumerated()), id: \.offset) { i, name in
+                Button { onPick(i) } label: {
+                    Text(name)
+                        .font(Theme.ui(14))
+                        .foregroundColor(Theme.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 13)
+                        .background((i == highlighted || hovered == i) ? Theme.accentTint08 : Color.clear)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { hovered = $0 ? i : (hovered == i ? nil : hovered) }
+            }
+        }
+        .padding(.vertical, 4)
+        .background(Theme.card)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.controlRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.controlRadius)
+                .stroke(Theme.inputBorder, lineWidth: 1)
+        )
+    }
+}
+
 /// Two-option segmented control for the recap view: Totals / By day.
 struct RecapModeToggle: View {
     @Binding var byDay: Bool

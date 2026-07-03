@@ -37,12 +37,23 @@ struct InsetField: View {
     var vPad: CGFloat = 11
     var hPad: CGFloat = 13
     var height: CGFloat? = nil   // when set, fixes the control height
+    var ghostSuffix: String = "" // dimmed inline completion drawn after the caret
+    var focusBinding: FocusState<LogField?>.Binding? = nil
+    var focusCase: LogField? = nil
     var onSubmit: (() -> Void)? = nil
 
     @FocusState private var focused: Bool
 
     var body: some View {
         ZStack(alignment: .leading) {
+            if !text.isEmpty && !ghostSuffix.isEmpty {
+                (Text(text).foregroundColor(.clear)
+                    + Text(ghostSuffix).foregroundColor(Theme.placeholder))
+                    .font(Theme.ui(fontSize))
+                    .lineLimit(1)
+                    .allowsHitTesting(false)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             if text.isEmpty {
                 Text(placeholder)
                     .font(Theme.ui(fontSize))
@@ -53,6 +64,7 @@ struct InsetField: View {
                 .font(Theme.ui(fontSize))
                 .foregroundColor(Theme.textPrimary)
                 .focused($focused)
+                .modifier(OptionalFocus(binding: focusBinding, value: focusCase))
                 .onSubmit { onSubmit?() }
         }
         .padding(.vertical, vPad)
@@ -114,6 +126,19 @@ struct DateFieldBox: View {
                 .frame(width: 260)
                 .background(Theme.card)
                 .preferredColorScheme(.dark)
+        }
+    }
+}
+
+/// Applies `.focused` only when a binding + case are supplied (shared field focus).
+private struct OptionalFocus: ViewModifier {
+    let binding: FocusState<LogField?>.Binding?
+    let value: LogField?
+    func body(content: Content) -> some View {
+        if let binding, let value {
+            content.focused(binding, equals: value)
+        } else {
+            content
         }
     }
 }

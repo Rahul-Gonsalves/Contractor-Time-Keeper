@@ -36,6 +36,11 @@ struct ContentView: View {
     @AppStorage("recapByDay") private var recapByDay = false
     @State private var formWidth: CGFloat = 0
 
+    // Client autocomplete
+    @FocusState private var focus: LogField?
+    @State private var acHighlighted = 0
+    @State private var acDismissed = false
+
     private let controlHeight: CGFloat = 40
     private let maxContentWidth: CGFloat = 1160
 
@@ -139,12 +144,56 @@ struct ContentView: View {
     }
 
     private var clientSuggestions: [String] {
-        let q = formClient.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return [] }
-        return allClientNames.filter {
-            $0.localizedCaseInsensitiveContains(q) &&
-            $0.compare(q, options: .caseInsensitive) != .orderedSame
+        Autocomplete.matches(query: formClient, names: allClientNames)
+    }
+    private var clientTypedIsExact: Bool {
+        Autocomplete.isExact(query: formClient, names: allClientNames)
+    }
+    private var suggestionsVisible: Bool {
+        focus == .client && !acDismissed && !clientSuggestions.isEmpty
+    }
+    private var acClamped: Int { max(0, min(acHighlighted, clientSuggestions.count - 1)) }
+    private var clientGhost: String {
+        guard suggestionsVisible else { return "" }
+        return Autocomplete.ghost(query: formClient, suggestion: clientSuggestions[acClamped])
+    }
+
+    /// The Client field: styled input + ghost text + focus + key handling; the
+    /// dropdown itself is drawn as a form-level overlay anchored to this frame.
+    private var clientField: some View {
+        InsetField(placeholder: "Client", text: $formClient, height: controlHeight,
+                   ghostSuffix: clientGhost,
+                   focusBinding: $focus, focusCase: .client,
+                   onSubmit: clientReturn)
+            .frame(maxWidth: .infinity)
+            .anchorPreference(key: ClientAnchorKey.self, value: .bounds) { $0 }
+            .onChange(of: formClient) { _ in acHighlighted = 0; acDismissed = false }
+            .onFieldKeys(
+                enabled: suggestionsVisible,
+                up: { acHighlighted = max(acClamped - 1, 0) },
+                down: { acHighlighted = min(acClamped + 1, clientSuggestions.count - 1) },
+                tab: { acceptSuggestion(0) },        // Tab accepts the first suggestion
+                escape: { acDismissed = true }
+            )
+    }
+
+    /// Return in the Client field: accept the highlighted suggestion (and move to
+    /// Hours) when the list is up and the text isn't already an exact client; else
+    /// submit the form normally.
+    private func clientReturn() {
+        if suggestionsVisible && !clientTypedIsExact {
+            acceptSuggestion(acClamped)
+        } else {
+            submitAdd()
         }
+    }
+
+    private func acceptSuggestion(_ index: Int) {
+        let list = clientSuggestions
+        guard index >= 0, index < list.count else { return }
+        formClient = list[index]
+        acDismissed = true
+        focus = .hours
     }
 
     private var logTimeCard: some View {
@@ -159,27 +208,21 @@ struct ContentView: View {
                     }
                 )
                 .onPreferenceChange(FormWidthKey.self) { formWidth = $0 }
-
-            if !clientSuggestions.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(clientSuggestions.prefix(6), id: \.self) { name in
-                        Button {
-                            formClient = name
-                        } label: {
-                            Text(name)
-                                .font(Theme.ui(14))
-                                .foregroundColor(Theme.textSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 6)
-                                .padding(.horizontal, 10)
+                .overlayPreferenceValue(ClientAnchorKey.self) { anchor in
+                    GeometryReader { proxy in
+                        if suggestionsVisible, let anchor {
+                            let rect = proxy[anchor]
+                            SuggestionsDropdown(
+                                suggestions: Array(clientSuggestions.prefix(8)),
+                                highlighted: acClamped,
+                                onPick: acceptSuggestion
+                            )
+                            .frame(width: rect.width)
+                            .offset(x: rect.minX, y: rect.maxY + 4)
                         }
-                        .buttonStyle(.plain)
-                        .background(Theme.inset)
-                        .clipShape(RoundedRectangle(cornerRadius: 7))
                     }
                 }
-                .padding(.top, 8)
-            }
+                .zIndex(10)
 
             if let hint = mergeHint {
                 Text(hint)
@@ -195,14 +238,13 @@ struct ContentView: View {
     private var logForm: some View {
         if formWidth > 0 && formWidth < 700 {
             VStack(spacing: 10) {
-                InsetField(placeholder: "Client", text: $formClient,
-                           height: controlHeight, onSubmit: submitAdd)
-                    .frame(maxWidth: .infinity)
+                clientField
                 HStack(spacing: 10) {
                     DateFieldBox(date: $formDate, height: controlHeight, fillWidth: true)
                         .frame(minWidth: 90, maxWidth: .infinity)
                     InsetField(placeholder: "Hours", text: $formHours,
-                               height: controlHeight, onSubmit: submitAdd)
+                               height: controlHeight,
+                               focusBinding: $focus, focusCase: .hours, onSubmit: submitAdd)
                         .frame(minWidth: 90, maxWidth: .infinity)
                 }
                 InsetField(placeholder: "Note (optional)", text: $formNote,
@@ -215,13 +257,12 @@ struct ContentView: View {
         } else {
             Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
                 GridRow {
-                    InsetField(placeholder: "Client", text: $formClient,
-                               height: controlHeight, onSubmit: submitAdd)
-                        .frame(maxWidth: .infinity)
+                    clientField
                     DateFieldBox(date: $formDate, height: controlHeight, fillWidth: true)
                         .frame(width: 150)
                     InsetField(placeholder: "Hours", text: $formHours,
-                               height: controlHeight, onSubmit: submitAdd)
+                               height: controlHeight,
+                               focusBinding: $focus, focusCase: .hours, onSubmit: submitAdd)
                         .frame(width: 110)
                 }
                 GridRow {

@@ -208,6 +208,21 @@ enum SelfTest {
         check("html escapes", yesIf(escHTML.contains("A &amp; &lt;B&gt;") && !escHTML.contains("<B>")), "y")
         try? FileManager.default.removeItem(at: edir)
 
+        // --- Client autocomplete (starts-with, sorted, exclude exact, ghost) ---
+        let names = ["Acme Co", "Acme Industries", "acme services", "Beta LLC", "Zeta"]
+        check("ac starts-with sorted",
+              Autocomplete.matches(query: "ac", names: names).joined(separator: "|"),
+              "Acme Co|Acme Industries|acme services")
+        check("ac empty → none", yesIf(Autocomplete.matches(query: "  ", names: names).isEmpty), "y")
+        check("ac not contains", yesIf(Autocomplete.matches(query: "eta", names: names).isEmpty), "y")
+        check("ac excludes exact",
+              yesIf(Autocomplete.matches(query: "Acme Co", names: names).isEmpty), "y")
+        check("ac isExact ci", yesIf(Autocomplete.isExact(query: "acme co", names: names)), "y")
+        check("ac not exact", yesIf(Autocomplete.isExact(query: "acme", names: names)), "n")
+        check("ac ghost", Autocomplete.ghost(query: "Ac", suggestion: "Acme Co"), "me Co")
+        check("ac ghost ci", Autocomplete.ghost(query: "ac", suggestion: "Acme Co"), "me Co")
+        check("ac ghost none", Autocomplete.ghost(query: "Acme Co", suggestion: "Acme Co"), "")
+
         print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
         exit(failures == 0 ? 0 : 1)
     }
