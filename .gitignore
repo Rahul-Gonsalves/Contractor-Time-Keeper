@@ -9,6 +9,9 @@ Timekeep.app/
 # macOS
 .DS_Store
 
+# Local Claude Code guidance
+CLAUDE.md
+
 # Xcode (if opened there later)
 *.xcodeproj/xcuserdata/
 xcuserdata/
