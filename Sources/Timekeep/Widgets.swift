@@ -272,32 +272,12 @@ struct RecapModeToggle: View {
     }
 }
 
-/// Primary "Copy recap" button — flexes to fill; turns green when copied.
-struct CopyButton: View {
-    let copied: Bool
-    let action: () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            Text(copied ? "Copied!" : "Copy recap")
-                .font(Theme.ui(14, .bold))
-                .foregroundColor(Theme.onAccent)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background((copied ? Theme.success : Theme.accent).brightness(hovering ? 0.06 : 0))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.controlRadius))
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-    }
-}
-
 /// Ghost button (Export .txt / Draft email) — accent text/border on hover;
 /// dimmed and non-interactive when disabled.
 struct GhostButton: View {
     let title: String
     var disabled: Bool = false
+    var fill: Bool = false
     let action: () -> Void
     @State private var hovering = false
 
@@ -314,8 +294,11 @@ struct GhostButton: View {
             Text(title)
                 .font(Theme.ui(14, .semibold))
                 .foregroundColor(fg)
+                .lineLimit(1)                       // never wrap to two lines
+                .fixedSize(horizontal: !fill, vertical: false)
                 .padding(.vertical, 10)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, fill ? 12 : 16)
+                .frame(maxWidth: fill ? .infinity : nil)
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.controlRadius)
                         .stroke(border, lineWidth: 1)

@@ -223,6 +223,16 @@ enum SelfTest {
         check("ac ghost ci", Autocomplete.ghost(query: "ac", suggestion: "Acme Co"), "me Co")
         check("ac ghost none", Autocomplete.ghost(query: "Acme Co", suggestion: "Acme Co"), "")
 
+        // Client name auto-capitalization (word-first, preserving the rest).
+        let capDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("timekeep-selftest-\(UUID().uuidString)")
+        let capStore = TimeStore(directory: capDir)
+        _ = capStore.addEntry(client: "client input", hours: 1, note: "")
+        _ = capStore.addEntry(client: "beta LLC", hours: 1, note: "")
+        check("cap words", capStore.entries.first { $0.client.hasPrefix("Client") }?.client ?? "", "Client Input")
+        check("cap preserves rest", capStore.entries.first { $0.client.hasPrefix("Beta") }?.client ?? "", "Beta LLC")
+        try? FileManager.default.removeItem(at: capDir)
+
         print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
         exit(failures == 0 ? 0 : 1)
     }

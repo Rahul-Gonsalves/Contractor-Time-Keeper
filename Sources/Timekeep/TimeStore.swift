@@ -54,7 +54,11 @@ final class TimeStore: ObservableObject {
     @discardableResult
     func addEntry(client rawClient: String, hours: Double, note rawNote: String,
                   date rawDate: Date = Date()) -> String? {
-        let name = rawClient.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = rawClient.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Capitalize the first letter of each word (preserving the rest: "acme LLC" → "Acme LLC").
+        let name = trimmed.split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
         guard !name.isEmpty, hours > 0 else { return nil }
         let note = rawNote.trimmingCharacters(in: .whitespacesAndNewlines)
         let day = DateHelp.cal.startOfDay(for: rawDate)

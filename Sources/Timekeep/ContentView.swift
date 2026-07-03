@@ -32,6 +32,8 @@ struct ContentView: View {
     @State private var copyToken = 0
     @State private var recapNotice: String? = nil
     @State private var noticeToken = 0
+    @State private var boxHovered = false
+    @State private var iconHovered = false
     @AppStorage(SettingsKeys.recapRecipient) private var recapRecipient = ""
     @AppStorage("recapByDay") private var recapByDay = false
     @State private var formWidth: CGFloat = 0
@@ -516,16 +518,15 @@ struct ContentView: View {
                 RoundedRectangle(cornerRadius: Theme.controlRadius)
                     .stroke(Theme.hairline, lineWidth: 1)
             )
+            .overlay(alignment: .topTrailing) { copyIcon }
+            .onHover { boxHovered = $0 }
+            .animation(.easeInOut(duration: 0.12), value: boxHovered)
+            .animation(.easeInOut(duration: 0.12), value: copied)
             .padding(.bottom, 12)
 
             HStack(spacing: 8) {
-                CopyButton(copied: copied, action: copyRecap)
-                    .contextMenu {
-                        Button("Copy recap", action: copyRecap)
-                        Button("Copy formatted (for email)", action: copyFormatted)
-                    }
-                GhostButton(title: "Export .xlsx", action: exportXLSX)
-                GhostButton(title: "Draft email", disabled: !monthHasHours, action: draftEmail)
+                GhostButton(title: "Export .xlsx", fill: true, action: exportXLSX)
+                GhostButton(title: "Draft email", disabled: !monthHasHours, fill: true, action: draftEmail)
             }
 
             if let notice = recapNotice {
@@ -534,6 +535,30 @@ struct ContentView: View {
                     .foregroundColor(Theme.muted)
                     .padding(.top, 10)
             }
+        }
+    }
+
+    /// Hover-reveal copy button in the recap preview's top-right corner.
+    @ViewBuilder
+    private var copyIcon: some View {
+        if boxHovered || copied {
+            Button(action: copyRecap) {
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(copied ? Theme.success : (iconHovered ? Theme.accent : Theme.muted))
+                    .frame(width: 28, height: 28)
+                    .background(iconHovered && !copied ? Theme.accentTint12 : Color.clear)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .onHover { iconHovered = $0 }
+            .help("Copy recap")
+            .contextMenu {
+                Button("Copy recap", action: copyRecap)
+                Button("Copy formatted (for email)", action: copyFormatted)
+            }
+            .padding(10)
+            .transition(.opacity)
         }
     }
 
@@ -563,7 +588,7 @@ struct ContentView: View {
         copied = true
         copyToken += 1
         let token = copyToken
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             if copyToken == token { copied = false }
         }
     }
