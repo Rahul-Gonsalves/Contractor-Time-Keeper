@@ -6,8 +6,12 @@ struct TimekeepApp: App {
     // Ensure the app activates as a regular foreground window even when launched
     // from a bare executable during development.
     init() {
-        if CommandLine.arguments.contains("--selftest") {
+        let args = CommandLine.arguments
+        if args.contains("--selftest") {
             SelfTest.run()
+        }
+        if let i = args.firstIndex(of: "--xlsx"), i + 1 < args.count {
+            SelfTest.writeSampleXLSX(path: args[i + 1], byDay: args.contains("--byday"))
         }
         NSApplication.shared.setActivationPolicy(.regular)
         DispatchQueue.main.async {

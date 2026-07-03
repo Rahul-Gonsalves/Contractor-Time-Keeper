@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 /// Reports the log form's available width so it can wrap on small windows.
 private struct FormWidthKey: PreferenceKey {
@@ -482,7 +483,7 @@ struct ContentView: View {
                         Button("Copy recap", action: copyRecap)
                         Button("Copy formatted (for email)", action: copyFormatted)
                     }
-                GhostButton(title: "Export .txt", action: exportTxt)
+                GhostButton(title: "Export .xlsx", action: exportXLSX)
                 GhostButton(title: "Draft email", disabled: !monthHasHours, action: draftEmail)
             }
 
@@ -526,15 +527,17 @@ struct ContentView: View {
         }
     }
 
-    private func exportTxt() {
-        let text = store.recap(monthKey: recapMonth, byDay: recapByDay)
+    private func exportXLSX() {
+        let clients = store.aggregate(monthKey: recapMonth)
+        let monthLabel = DateHelp.monthLabel(fromKey: recapMonth)
+        let byDay = recapByDay
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "recap-\(recapMonth).txt"
-        panel.allowedContentTypes = [.plainText]
+        panel.nameFieldStringValue = "recap-\(recapMonth).xlsx"
+        panel.allowedContentTypes = [UTType(filenameExtension: "xlsx") ?? .data]
         panel.canCreateDirectories = true
         panel.begin { response in
             guard response == .OK, let url = panel.url else { return }
-            try? text.data(using: .utf8)?.write(to: url, options: .atomic)
+            XLSXExport.write(to: url, monthLabel: monthLabel, clients: clients, byDay: byDay)
         }
     }
 

@@ -3,6 +3,29 @@ import Foundation
 /// Runnable via `Timekeep --selftest` — exercises the real store/formatting code
 /// so behavior can be verified from the command line without the UI.
 enum SelfTest {
+    /// `Timekeep --xlsx <path> [--byday]` — writes a sample workbook for validation.
+    static func writeSampleXLSX(path: String, byDay: Bool) -> Never {
+        let cal = DateHelp.cal
+        let mc = cal.dateComponents([.year, .month], from: Date())
+        func day(_ d: Int) -> Date { cal.date(from: DateComponents(year: mc.year, month: mc.month, day: d))! }
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("xlsx-sample-\(UUID().uuidString)")
+        let store = TimeStore(directory: dir)
+        _ = store.addEntry(client: "Acme Co", hours: 2, note: "", date: day(1))
+        _ = store.addEntry(client: "Acme Co", hours: 3.5, note: "", date: day(2))
+        _ = store.addEntry(client: "Acme Co", hours: 6, note: "", date: day(8))
+        _ = store.addEntry(client: "Beta LLC", hours: 4, note: "", date: day(2))
+        _ = store.addEntry(client: "Beta LLC", hours: 8, note: "", date: day(8))
+        let mk = DateHelp.monthKey(Date())
+        XLSXExport.write(to: URL(fileURLWithPath: path),
+                         monthLabel: DateHelp.monthLabel(fromKey: mk),
+                         clients: store.aggregate(monthKey: mk),
+                         byDay: byDay)
+        try? FileManager.default.removeItem(at: dir)
+        print("wrote \(path)")
+        exit(0)
+    }
+
     static func run() -> Never {
         var failures = 0
         func check(_ label: String, _ got: String, _ want: String) {

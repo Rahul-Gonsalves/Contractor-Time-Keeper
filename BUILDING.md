@@ -57,6 +57,20 @@ Sources/Timekeep/
   TimeStore.swift             persistence + core behavior rules
   Formatting.swift            hours + date formatting helpers
   Theme.swift                 design tokens (colors, radii, fonts)
+  RecapHTML.swift             email-safe HTML recap
+  XLSXExport.swift            formatted .xlsx recap export
   SelfTest.swift              `--selftest` logic checks
 Scripts/bundle.sh             wraps the binary into Timekeep.app
+```
+
+## Dependencies
+- [damuellen/xlsxwriter.swift](https://github.com/damuellen/xlsxwriter.swift) →
+  [jmcnamara/libxlsxwriter](https://github.com/jmcnamara/libxlsxwriter) — used for
+  the `.xlsx` recap export. The C library is compiled by SwiftPM (no Homebrew /
+  system install needed). `Package.resolved` is committed to pin the versions.
+
+The self-test binary can also emit a sample workbook for inspection:
+```bash
+swift run Timekeep --xlsx /tmp/recap.xlsx           # Totals view
+swift run Timekeep --xlsx /tmp/recap.xlsx --byday   # By-day view
 ```
