@@ -13,6 +13,9 @@ struct TimekeepApp: App {
         if let i = args.firstIndex(of: "--xlsx"), i + 1 < args.count {
             SelfTest.writeSampleXLSX(path: args[i + 1], byDay: args.contains("--byday"))
         }
+        if args.contains("--import-june2026") {
+            SelfTest.importJune2026()
+        }
         NSApplication.shared.setActivationPolicy(.regular)
         DispatchQueue.main.async {
             NSApplication.shared.activate(ignoringOtherApps: true)

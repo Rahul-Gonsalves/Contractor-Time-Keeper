@@ -26,6 +26,44 @@ enum SelfTest {
         exit(0)
     }
 
+    /// `Timekeep --import-june2026` — one-time seed of historical June 2026 hours into
+    /// the real store. Guarded by a UserDefaults flag so it never double-imports.
+    static func importJune2026() -> Never {
+        let flag = "importedJune2026"
+        if UserDefaults.standard.bool(forKey: flag) {
+            print("June 2026 already imported — skipping."); exit(0)
+        }
+        let rows: [(String, String, Double)] = [
+            ("admin practice", "2026-06-17", 2), ("admin practice", "2026-06-18", 1),
+            ("admin practice", "2026-06-16", 1), ("Become an Agentblazer Champion 2026", "2026-06-01", 3),
+            ("catalyst tickets", "2026-06-02", 0.5), ("DNOW", "2026-06-15", 2.5),
+            ("meeting", "2026-06-02", 0.5), ("meeting", "2026-06-03", 0.5),
+            ("meeting", "2026-06-10", 0.5), ("meeting", "2026-06-12", 1),
+            ("meeting", "2026-06-15", 1), ("meeting", "2026-06-16", 0.5),
+            ("meeting", "2026-06-18", 0.5), ("OwnerOps360", "2026-06-07", 2),
+            ("OwnerOps360", "2026-06-08", 5), ("OwnerOps360", "2026-06-09", 4),
+            ("OwnerOps360", "2026-06-22", 8), ("OwnerOps360", "2026-06-23", 1.5),
+            ("OwnerOps360", "2026-06-26", 2.5), ("OwnerOps360", "2026-06-27", 3),
+            ("OwnerOps360", "2026-06-29", 1), ("petroserve", "2026-06-23", 2.5),
+            ("petroserve", "2026-06-24", 8), ("petroserve", "2026-06-25", 8.5),
+            ("petroserve", "2026-06-26", 4.5), ("petroserve", "2026-06-29", 7.5),
+            ("petroserve", "2026-06-30", 8), ("SciDev", "2026-06-10", 4.5),
+            ("working meeting", "2026-06-05", 1),
+        ]
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        let store = TimeStore()
+        for (client, date, hours) in rows {
+            guard let d = f.date(from: date) else { continue }
+            _ = store.addEntry(client: client, hours: hours, note: "", date: d)
+        }
+        UserDefaults.standard.set(true, forKey: flag)
+        let total = store.monthTotal("2026-06")
+        print("Imported June 2026 — total \(formatHours(total)) (expected 86h)")
+        exit(total == 86 ? 0 : 1)
+    }
+
     static func run() -> Never {
         var failures = 0
         func check(_ label: String, _ got: String, _ want: String) {
