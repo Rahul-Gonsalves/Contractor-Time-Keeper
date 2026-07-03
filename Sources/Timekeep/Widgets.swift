@@ -152,10 +152,12 @@ struct ClientRowView: View {
                     .font(Theme.mono(13))
                     .foregroundColor(Theme.accent)
                     .fixedSize()
-                Text(totalLabel)
-                    .font(Theme.mono(11.5))
-                    .foregroundColor(Theme.faint)
-                    .fixedSize()
+                if active {   // all-time total shown only while selected
+                    Text("· \(totalLabel)")
+                        .font(Theme.mono(11.5))
+                        .foregroundColor(Theme.faint)
+                        .fixedSize()
+                }
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 12)

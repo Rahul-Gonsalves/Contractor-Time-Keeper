@@ -334,8 +334,10 @@ struct ContentView: View {
     // MARK: - Card 2: Entries (timeline)
 
     private var visibleEntries: [TimeEntry] {
-        guard let f = filterClient else { return store.entries }
-        return store.entries.filter { $0.client == f }
+        // Scoped to the month selected in the recap picker; then the client filter.
+        store.entries.filter {
+            DateHelp.monthKey($0.date) == recapMonth && (filterClient == nil || $0.client == filterClient)
+        }
     }
 
     private struct DayGroup: Identifiable {
@@ -386,7 +388,7 @@ struct ContentView: View {
             .padding(.bottom, 6)
 
             if visibleEntries.isEmpty {
-                Text("No entries yet. Log your first hours above — the date is filled in automatically.")
+                Text("No entries in \(DateHelp.monthLabel(fromKey: recapMonth)).")
                     .font(Theme.ui(14))
                     .foregroundColor(Theme.faint)
                     .multilineTextAlignment(.center)
@@ -473,7 +475,7 @@ struct ContentView: View {
             if agg[e.client] == nil { order.append(e.client) }
             var a = agg[e.client] ?? Agg()
             a.total += e.hours
-            if DateHelp.monthKey(e.date) == curMonth { a.month += e.hours }
+            if DateHelp.monthKey(e.date) == recapMonth { a.month += e.hours }
             agg[e.client] = a
         }
         return order
