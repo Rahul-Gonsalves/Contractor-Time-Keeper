@@ -13,6 +13,12 @@ func formatHours(_ h: Double) -> String {
     return s + "h"
 }
 
+/// Money: `$340`, `$347.50` — cents shown only when non-zero.
+func formatMoney(_ v: Double) -> String {
+    let r = (v * 100).rounded() / 100
+    return r == r.rounded() ? "$\(Int(r))" : "$" + String(format: "%.2f", r)
+}
+
 enum DateHelp {
     static let cal = Calendar.current
 

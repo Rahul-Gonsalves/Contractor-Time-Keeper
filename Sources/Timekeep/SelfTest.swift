@@ -42,6 +42,10 @@ enum SelfTest {
         check("fmt round up",   formatHours(5.128), "5.13h") // rounds to 2 decimals
         check("fmt round down", formatHours(1.001), "1h")
 
+        check("money whole",  formatMoney(340),    "$340")
+        check("money cents",  formatMoney(347.5),  "$347.50")
+        check("money round",  formatMoney(347.529), "$347.53")
+
         // Store behavior in an isolated temp dir.
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("timekeep-selftest-\(UUID().uuidString)")

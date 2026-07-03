@@ -36,6 +36,7 @@ struct ContentView: View {
     @State private var iconHovered = false
     @AppStorage(SettingsKeys.recapRecipient) private var recapRecipient = ""
     @AppStorage("recapByDay") private var recapByDay = false
+    @AppStorage(SettingsKeys.hourlyRate) private var hourlyRate = 20.0
     @State private var formWidth: CGFloat = 0
 
     // Client autocomplete
@@ -61,10 +62,37 @@ struct ContentView: View {
                         .padding(.bottom, 48)
                         .frame(maxWidth: .infinity)
                 }
+                footer
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(Theme.page)
         }
+    }
+
+    // MARK: - Footer
+
+    private var footer: some View {
+        Button(action: openSettings) {
+            HStack(spacing: 6) {
+                Text("⌘ ,")
+                    .font(Theme.mono(11))
+                    .foregroundColor(Theme.faint)
+                    .padding(.vertical, 1)
+                    .padding(.horizontal, 5)
+                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(Theme.inputBorder, lineWidth: 1))
+                Text("Settings")
+                    .font(Theme.ui(11))
+                    .foregroundColor(Theme.faint)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 32)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func openSettings() {
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     // MARK: - Header
@@ -88,6 +116,12 @@ struct ContentView: View {
                 Text(formatHours(store.monthTotal(curMonth)))
                     .font(Theme.mono(15, .semibold))
                     .foregroundColor(Theme.accent)
+                if hourlyRate > 0 {
+                    Text(formatMoney(store.monthTotal(curMonth) * hourlyRate))
+                        .font(Theme.mono(15, .semibold))
+                        .foregroundColor(Theme.success)
+                        .padding(.leading, 4)
+                }
             }
         }
         .padding(.top, 22)
