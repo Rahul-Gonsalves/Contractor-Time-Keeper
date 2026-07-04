@@ -45,24 +45,46 @@ struct ClientsPanel: View, Equatable {
 
     var body: some View {
         Card {
+            let rows = clientRows
+            let clients = rows.filter { !store.isInternal($0.id) }
+            let internals = rows.filter { store.isInternal($0.id) }
+
             SectionLabel(text: "Clients")
                 .padding(.bottom, 12)
 
-            if clientRows.isEmpty {
+            if rows.isEmpty {
                 Text("Clients appear here as you log time.")
                     .font(Theme.ui(13.5))
                     .foregroundColor(Theme.faint)
                     .padding(.vertical, 6)
             } else {
-                VStack(spacing: 4) {
-                    ForEach(clientRows) { row in
-                        ClientRowView(
-                            name: row.id,
-                            monthLabel: row.monthLabel,
-                            totalLabel: row.totalLabel,
-                            active: filterClient == row.id,
-                            onSelect: { selectClient(row.id) }
-                        )
+                rowList(clients)
+
+                if !internals.isEmpty {
+                    SectionLabel(text: "Internal")
+                        .padding(.top, clients.isEmpty ? 0 : 14)
+                        .padding(.bottom, 12)
+                    rowList(internals)
+                }
+            }
+        }
+    }
+
+    private func rowList(_ rows: [ClientRow]) -> some View {
+        VStack(spacing: 4) {
+            ForEach(rows) { row in
+                ClientRowView(
+                    name: row.id,
+                    monthLabel: row.monthLabel,
+                    totalLabel: row.totalLabel,
+                    active: filterClient == row.id,
+                    onSelect: { selectClient(row.id) }
+                )
+                .contextMenu {
+                    if store.isInternal(row.id) {
+                        Button("Mark as client") { store.setInternal(row.id, false) }
+                    } else {
+                        Button("Mark as internal") { store.setInternal(row.id, true) }
                     }
                 }
             }

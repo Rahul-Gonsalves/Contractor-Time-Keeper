@@ -23,6 +23,7 @@ struct ContentView: View {
     @State private var formHours = ""
     @State private var formNote = ""
     @State private var formDate = Date()
+    @State private var formInternal = false
 
     @State private var filterClient: String? = nil
     @State private var recapMonth: String = DateHelp.monthKey(Date())
@@ -202,7 +203,16 @@ struct ContentView: View {
                    onSubmit: clientReturn)
             .frame(maxWidth: .infinity)
             .anchorPreference(key: ClientAnchorKey.self, value: .bounds) { $0 }
-            .onChange(of: formClient) { _ in acHighlighted = 0; acDismissed = false }
+            .onChange(of: formClient) { _ in
+                acHighlighted = 0; acDismissed = false
+                // When the text matches an existing client, reflect its stored kind.
+                if let existing = allClientNames.first(where: {
+                    $0.compare(formClient.trimmingCharacters(in: .whitespaces),
+                               options: .caseInsensitive) == .orderedSame
+                }) {
+                    formInternal = store.isInternal(existing)
+                }
+            }
             .onFieldKeys(
                 enabled: suggestionsVisible,
                 up: { acHighlighted = max(acClamped - 1, 0) },
@@ -234,6 +244,12 @@ struct ContentView: View {
                     GeometryReader { g in Color.clear.preference(key: FormWidthKey.self, value: g.size.width) }
                 )
                 .onPreferenceChange(FormWidthKey.self) { formWidth = $0 }
+
+            HStack(spacing: 6) {
+                PillToggle(left: "Client", right: "Internal", isRight: $formInternal)
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 10)
 
             if let hint = mergeHint {
                 Text(hint)
@@ -288,9 +304,10 @@ struct ContentView: View {
 
     private func submitAdd() {
         guard let hours = Double(formHours.trimmingCharacters(in: .whitespaces)) else { return }
-        let hint = store.addEntry(client: formClient, hours: hours, note: formNote, date: formDate)
+        let hint = store.addEntry(client: formClient, hours: hours, note: formNote,
+                                  date: formDate, isInternal: formInternal)
         guard !formClient.trimmingCharacters(in: .whitespaces).isEmpty, hours > 0 else { return }
-        formClient = ""; formHours = ""; formNote = ""; formDate = Date()
+        formClient = ""; formHours = ""; formNote = ""; formDate = Date(); formInternal = false
         setMergeHint(hint)
     }
 

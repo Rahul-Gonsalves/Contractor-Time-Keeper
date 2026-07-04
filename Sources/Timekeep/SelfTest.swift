@@ -275,6 +275,22 @@ enum SelfTest {
         check("cap preserves rest", capStore.entries.first { $0.client.hasPrefix("Beta") }?.client ?? "", "Beta LLC")
         try? FileManager.default.removeItem(at: capDir)
 
+        // --- Client vs internal kind ---
+        let kdir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("timekeep-selftest-\(UUID().uuidString)")
+        let kstore = TimeStore(directory: kdir)
+        _ = kstore.addEntry(client: "Acme", hours: 1, note: "")                      // default: client
+        _ = kstore.addEntry(client: "admin work", hours: 1, note: "", isInternal: true)
+        check("kind default client", yesIf(kstore.isInternal("Acme")), "n")
+        check("kind internal", yesIf(kstore.isInternal("Admin Work")), "y")
+        // Existing client keeps its kind even if the flag differs on a later add.
+        _ = kstore.addEntry(client: "acme", hours: 1, note: "", isInternal: true)
+        check("kind sticky", yesIf(kstore.isInternal("Acme")), "n")
+        // Kind survives reload.
+        let kreload = TimeStore(directory: kdir)
+        check("kind persists", yesIf(kreload.isInternal("Admin Work")), "y")
+        try? FileManager.default.removeItem(at: kdir)
+
         print(failures == 0 ? "\nALL PASS" : "\n\(failures) FAILURE(S)")
         exit(failures == 0 ? 0 : 1)
     }

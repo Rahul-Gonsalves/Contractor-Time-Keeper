@@ -5,8 +5,12 @@ import Combine
 /// JSON file in Application Support (local only — no sync, no accounts, no network).
 final class TimeStore: ObservableObject {
     @Published private(set) var entries: [TimeEntry] = []
+    /// Client names classified as internal systems (kind is a property of the client,
+    /// not each entry). Everything not listed here is a regular client.
+    @Published private(set) var internalClients: Set<String> = []
 
     private let fileURL: URL
+    private let internalURL: URL
 
     /// - Parameter directory: override the storage directory (used by tests).
     init(directory: URL? = nil) {
@@ -22,17 +26,22 @@ final class TimeStore: ObservableObject {
         }
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appendingPathComponent("entries.json")
+        internalURL = dir.appendingPathComponent("internal-clients.json")
         load()
     }
 
     // MARK: - Persistence
 
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL) else { return }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        if let decoded = try? decoder.decode([TimeEntry].self, from: data) {
+        if let data = try? Data(contentsOf: fileURL),
+           let decoded = try? decoder.decode([TimeEntry].self, from: data) {
             entries = decoded
+        }
+        if let data = try? Data(contentsOf: internalURL),
+           let names = try? JSONDecoder().decode([String].self, from: data) {
+            internalClients = Set(names)
         }
     }
 
@@ -43,6 +52,19 @@ final class TimeStore: ObservableObject {
         if let data = try? encoder.encode(entries) {
             try? data.write(to: fileURL, options: .atomic)
         }
+        if let data = try? JSONEncoder().encode(internalClients.sorted()) {
+            try? data.write(to: internalURL, options: .atomic)
+        }
+    }
+
+    // MARK: - Client kind
+
+    func isInternal(_ client: String) -> Bool { internalClients.contains(client) }
+
+    /// Reclassify an existing client (right-click on a client row).
+    func setInternal(_ client: String, _ internalFlag: Bool) {
+        if internalFlag { internalClients.insert(client) } else { internalClients.remove(client) }
+        persist()
     }
 
     // MARK: - Core behavior
@@ -53,7 +75,7 @@ final class TimeStore: ObservableObject {
     /// Returns a transient merge hint when a merge happened, else nil.
     @discardableResult
     func addEntry(client rawClient: String, hours: Double, note rawNote: String,
-                  date rawDate: Date = Date()) -> String? {
+                  date rawDate: Date = Date(), isInternal: Bool = false) -> String? {
         let trimmed = rawClient.trimmingCharacters(in: .whitespacesAndNewlines)
         // Capitalize the first letter of each word (preserving the rest: "acme LLC" → "Acme LLC").
         let name = trimmed.split(separator: " ")
@@ -68,6 +90,11 @@ final class TimeStore: ObservableObject {
             .map(\.client)
             .first { $0.compare(name, options: .caseInsensitive) == .orderedSame }
         let client = existingName ?? name
+
+        // Kind is recorded only for brand-new clients; existing ones keep theirs.
+        if existingName == nil && isInternal {
+            internalClients.insert(client)
+        }
 
         var hint: String? = nil
         if let idx = entries.firstIndex(where: {

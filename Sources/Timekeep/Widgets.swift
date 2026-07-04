@@ -256,14 +256,16 @@ struct SuggestionsDropdown: View {
     }
 }
 
-/// Two-option segmented control for the recap view: Totals / By day.
-struct RecapModeToggle: View {
-    @Binding var byDay: Bool
+/// Two-option segmented pill toggle (e.g. Totals/By day, Client/Internal).
+struct PillToggle: View {
+    let left: String
+    let right: String
+    @Binding var isRight: Bool
 
     var body: some View {
         HStack(spacing: 6) {
-            segment("Totals", active: !byDay) { byDay = false }
-            segment("By day", active: byDay) { byDay = true }
+            segment(left, active: !isRight) { isRight = false }
+            segment(right, active: isRight) { isRight = true }
         }
     }
 

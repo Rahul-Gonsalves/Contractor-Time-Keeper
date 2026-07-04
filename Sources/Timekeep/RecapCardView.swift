@@ -30,7 +30,7 @@ struct RecapCardView: View {
             .padding(.bottom, 12)
 
             HStack(spacing: 6) {
-                RecapModeToggle(byDay: $recapByDay)
+                PillToggle(left: "Totals", right: "By day", isRight: $recapByDay)
                 Spacer(minLength: 0)
             }
             .padding(.bottom, 12)
