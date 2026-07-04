@@ -73,7 +73,9 @@ struct TimelineCard: View, Equatable {
                     .padding(.vertical, 28)
                     .padding(.horizontal, 8)
             } else {
-                LazyVStack(spacing: 0) {
+                // Plain VStack: a LazyVStack nested inside the Card (non-lazy container)
+                // caused a scroll-relayout loop (hard freeze); ~33 rows need no laziness.
+                VStack(spacing: 0) {
                     ForEach(dayGroups) { day in dayGroupView(day) }
                 }
             }

@@ -43,29 +43,27 @@ struct ClientsPanel: View, Equatable {
             }
     }
 
+    @State private var showInternal = false   // tab selection (local; not part of ==)
+
     var body: some View {
         Card {
-            let rows = clientRows
-            let clients = rows.filter { !store.isInternal($0.id) }
-            let internals = rows.filter { store.isInternal($0.id) }
+            HStack(spacing: 10) {
+                SectionLabel(text: "Clients")
+                Spacer(minLength: 10)
+                PillToggle(left: "Clients", right: "Internal", isRight: $showInternal)
+            }
+            .padding(.bottom, 12)
 
-            SectionLabel(text: "Clients")
-                .padding(.bottom, 12)
+            let rows = clientRows.filter { store.isInternal($0.id) == showInternal }
 
             if rows.isEmpty {
-                Text("Clients appear here as you log time.")
+                Text(showInternal ? "No internal systems yet."
+                                  : "Clients appear here as you log time.")
                     .font(Theme.ui(13.5))
                     .foregroundColor(Theme.faint)
                     .padding(.vertical, 6)
             } else {
-                rowList(clients)
-
-                if !internals.isEmpty {
-                    SectionLabel(text: "Internal")
-                        .padding(.top, clients.isEmpty ? 0 : 14)
-                        .padding(.bottom, 12)
-                    rowList(internals)
-                }
+                rowList(rows)
             }
         }
     }

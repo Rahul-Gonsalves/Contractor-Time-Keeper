@@ -152,9 +152,11 @@ struct ContentView: View {
                 .equatable()
         }
         // Host the autocomplete dropdown above the cards (outside their clipping).
+        // The visibility check is OUTSIDE the GeometryReader so no geometry is
+        // measured per scroll frame while the dropdown is closed.
         .overlayPreferenceValue(ClientAnchorKey.self) { anchor in
-            GeometryReader { proxy in
-                if suggestionsVisible, let anchor {
+            if suggestionsVisible, let anchor {
+                GeometryReader { proxy in
                     let rect = proxy[anchor]
                     SuggestionsDropdown(suggestions: clientSuggestions,
                                         highlighted: acClamped,
